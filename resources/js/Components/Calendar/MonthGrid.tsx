@@ -35,7 +35,12 @@ function isSameDay(a: Date, b: Date): boolean {
  * Presentational 6x7 month grid. No data fetching — callers pass the events
  * for the visible range and handle navigation/create/edit via the callbacks.
  */
-export default function MonthGrid({ month, events, onDayClick, onEventClick }: MonthGridProps) {
+export default function MonthGrid({
+    month,
+    events,
+    onDayClick,
+    onEventClick,
+}: MonthGridProps) {
     const gridStart = startOfCalendar(month);
     const days = Array.from({ length: 42 }, (_, i) => {
         const date = new Date(gridStart);
@@ -66,13 +71,17 @@ export default function MonthGrid({ month, events, onDayClick, onEventClick }: M
                             key={date.toISOString()}
                             type="button"
                             onClick={() => onDayClick?.(date)}
-                            className={`min-h-24 border-b border-r border-gray-100 p-1 text-left align-top last:border-r-0 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 ${
-                                inMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'
+                            className={`min-h-24 border-r border-b border-gray-100 p-1 text-left align-top last:border-r-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:ring-inset ${
+                                inMonth
+                                    ? 'bg-white'
+                                    : 'bg-gray-50 text-gray-400'
                             }`}
                         >
                             <span
                                 className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
-                                    isSameDay(date, today) ? 'bg-indigo-600 font-semibold text-white' : ''
+                                    isSameDay(date, today)
+                                        ? 'bg-indigo-600 font-semibold text-white'
+                                        : ''
                                 }`}
                             >
                                 {date.getDate()}

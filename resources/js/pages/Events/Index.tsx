@@ -3,6 +3,7 @@ import { Head, Link, useForm } from '@inertiajs/react';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import MonthGrid, { CalendarEvent } from '@/Components/Calendar/MonthGrid';
+import DayView from '@/Components/Calendar/DayView';
 
 interface Group {
     id: number;
@@ -52,8 +53,14 @@ function eventUrl(group: Group, calendar: Calendar, eventId: number): string {
     return `${eventsIndexUrl(group, calendar)}/${eventId}`;
 }
 
-export default function EventsIndex({ group, calendar, events, can_manage }: Props) {
+export default function EventsIndex({
+    group,
+    calendar,
+    events,
+    can_manage,
+}: Props) {
     const [month, setMonth] = useState<Date>(new Date());
+    const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
     const [editingEvent, setEditingEvent] = useState<EventRecord | null>(null);
 
@@ -78,10 +85,15 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
             return;
         }
 
+        // From the month grid, `date` has no time component (midnight) -
+        // default that to a sensible working hour. From a DayView slot
+        // click, `date` already carries the clicked hour - keep it as is.
         const start = new Date(date);
-        start.setHours(9, 0, 0, 0);
-        const end = new Date(date);
-        end.setHours(10, 0, 0, 0);
+        if (start.getHours() === 0 && start.getMinutes() === 0) {
+            start.setHours(9, 0, 0, 0);
+        }
+        const end = new Date(start);
+        end.setHours(start.getHours() + 1);
 
         form.setData({
             title: '',
@@ -149,8 +161,10 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
         });
     };
 
-    const goToPrevMonth = () => setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
-    const goToNextMonth = () => setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+    const goToPrevMonth = () =>
+        setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+    const goToNextMonth = () =>
+        setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
     const goToToday = () => setMonth(new Date());
 
     const monthLabel = month.toLocaleDateString(undefined, {
@@ -163,7 +177,7 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
             header={
                 <div className="flex items-center justify-between">
                     <div>
-                        <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                        <h2 className="text-xl leading-tight font-semibold text-gray-800">
                             {calendar.name}
                         </h2>
                         <p className="text-sm text-gray-500">{group.name}</p>
@@ -188,45 +202,63 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
 
             <div className="py-8">
                 <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={goToPrevMonth}
-                                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                >
-                                    ← Prev
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={goToToday}
-                                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                >
-                                    Today
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={goToNextMonth}
-                                    className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                >
-                                    Next →
-                                </button>
-                            </div>
-                            <h3 className="text-base font-semibold text-gray-900">{monthLabel}</h3>
-                        </div>
-
-                        <MonthGrid
-                            month={month}
+                    {selectedDay ? (
+                        <DayView
+                            date={selectedDay}
                             events={events}
-                            onDayClick={can_manage ? openCreateDialog : undefined}
-                            onEventClick={can_manage ? openEditDialog : undefined}
+                            onClose={() => setSelectedDay(null)}
+                            onSlotClick={
+                                can_manage ? openCreateDialog : undefined
+                            }
+                            onEventClick={openEditDialog}
                         />
-                    </div>
+                    ) : (
+                        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={goToPrevMonth}
+                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
+                                    >
+                                        ← Prev
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={goToToday}
+                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
+                                    >
+                                        Today
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={goToNextMonth}
+                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
+                                    >
+                                        Next →
+                                    </button>
+                                </div>
+                                <h3 className="text-base font-semibold text-gray-900">
+                                    {monthLabel}
+                                </h3>
+                            </div>
+
+                            <MonthGrid
+                                month={month}
+                                events={events}
+                                onDayClick={(date) => setSelectedDay(date)}
+                                onEventClick={openEditDialog}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
-            <Dialog open={dialogMode !== null} onClose={closeDialog} className="relative z-50">
+            <Dialog
+                open={dialogMode !== null}
+                onClose={closeDialog}
+                className="relative z-50"
+            >
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
                     <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
@@ -236,18 +268,26 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
 
                         <form onSubmit={submit} className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Title</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Title
+                                </label>
                                 <input
                                     type="text"
                                     value={form.data.title}
-                                    onChange={(e) => form.setData('title', e.target.value)}
-                                    className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                        form.errors.title ? 'border-red-500' : 'border-gray-300'
+                                    onChange={(e) =>
+                                        form.setData('title', e.target.value)
+                                    }
+                                    className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                        form.errors.title
+                                            ? 'border-red-500'
+                                            : 'border-gray-300'
                                     }`}
                                     required
                                 />
                                 {form.errors.title && (
-                                    <p className="mt-1 text-sm text-red-500">{form.errors.title}</p>
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {form.errors.title}
+                                    </p>
                                 )}
                             </div>
 
@@ -257,12 +297,19 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
                                 </label>
                                 <textarea
                                     value={form.data.description}
-                                    onChange={(e) => form.setData('description', e.target.value)}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'description',
+                                            e.target.value,
+                                        )
+                                    }
                                     rows={3}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 />
                                 {form.errors.description && (
-                                    <p className="mt-1 text-sm text-red-500">{form.errors.description}</p>
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {form.errors.description}
+                                    </p>
                                 )}
                             </div>
 
@@ -273,11 +320,15 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
                                 <input
                                     type="text"
                                     value={form.data.location}
-                                    onChange={(e) => form.setData('location', e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    onChange={(e) =>
+                                        form.setData('location', e.target.value)
+                                    }
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 />
                                 {form.errors.location && (
-                                    <p className="mt-1 text-sm text-red-500">{form.errors.location}</p>
+                                    <p className="mt-1 text-sm text-red-500">
+                                        {form.errors.location}
+                                    </p>
                                 )}
                             </div>
 
@@ -286,10 +337,18 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
                                     id="all_day"
                                     type="checkbox"
                                     checked={form.data.all_day}
-                                    onChange={(e) => form.setData('all_day', e.target.checked)}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'all_day',
+                                            e.target.checked,
+                                        )
+                                    }
                                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                <label htmlFor="all_day" className="text-sm font-medium text-gray-700">
+                                <label
+                                    htmlFor="all_day"
+                                    className="text-sm font-medium text-gray-700"
+                                >
                                     All day
                                 </label>
                             </div>
@@ -302,14 +361,23 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
                                     <input
                                         type="datetime-local"
                                         value={form.data.starts_at}
-                                        onChange={(e) => form.setData('starts_at', e.target.value)}
-                                        className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                            form.errors.starts_at ? 'border-red-500' : 'border-gray-300'
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'starts_at',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                            form.errors.starts_at
+                                                ? 'border-red-500'
+                                                : 'border-gray-300'
                                         }`}
                                         required
                                     />
                                     {form.errors.starts_at && (
-                                        <p className="mt-1 text-sm text-red-500">{form.errors.starts_at}</p>
+                                        <p className="mt-1 text-sm text-red-500">
+                                            {form.errors.starts_at}
+                                        </p>
                                     )}
                                 </div>
                                 <div>
@@ -319,14 +387,23 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
                                     <input
                                         type="datetime-local"
                                         value={form.data.ends_at}
-                                        onChange={(e) => form.setData('ends_at', e.target.value)}
-                                        className={`w-full rounded-lg border px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                            form.errors.ends_at ? 'border-red-500' : 'border-gray-300'
+                                        onChange={(e) =>
+                                            form.setData(
+                                                'ends_at',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                            form.errors.ends_at
+                                                ? 'border-red-500'
+                                                : 'border-gray-300'
                                         }`}
                                         required
                                     />
                                     {form.errors.ends_at && (
-                                        <p className="mt-1 text-sm text-red-500">{form.errors.ends_at}</p>
+                                        <p className="mt-1 text-sm text-red-500">
+                                            {form.errors.ends_at}
+                                        </p>
                                     )}
                                 </div>
                             </div>
@@ -357,7 +434,9 @@ export default function EventsIndex({ group, calendar, events, can_manage }: Pro
                                         disabled={form.processing}
                                         className="rounded-lg bg-gray-800 px-4 py-2 font-semibold text-white transition hover:bg-gray-700 disabled:opacity-50"
                                     >
-                                        {dialogMode === 'edit' ? 'Save Changes' : 'Create Event'}
+                                        {dialogMode === 'edit'
+                                            ? 'Save Changes'
+                                            : 'Create Event'}
                                     </button>
                                 </div>
                             </div>

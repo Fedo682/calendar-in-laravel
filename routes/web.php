@@ -1,10 +1,11 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EventController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupMembershipController;
-use App\Http\Controllers\CalendarController;
-use App\Http\Controllers\EventController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -18,9 +19,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -40,6 +41,7 @@ Route::middleware('auth')->group(function () {
         // controller explicitly verifies {user} belongs to {group} itself.
         Route::get('members', [GroupMembershipController::class, 'index'])->name('members.index');
         Route::post('members', [GroupMembershipController::class, 'store'])->name('members.store');
+        Route::post('members/bulk', [GroupMembershipController::class, 'bulkStore'])->name('members.bulk');
         Route::put('members/{user}', [GroupMembershipController::class, 'update'])->name('members.update');
         Route::delete('members/{user}', [GroupMembershipController::class, 'destroy'])->name('members.destroy');
     });
@@ -51,6 +53,8 @@ Route::middleware('auth')->group(function () {
         Route::prefix('calendars/{calendar}')->name('calendars.')->scopeBindings()->group(function () {
             // Events (Admin manages; Members view)
             Route::resource('events', EventController::class)->except(['create', 'edit']);
+            Route::post('events/{event}/report-conflict', [EventController::class, 'reportConflict'])
+                ->name('events.report-conflict');
         });
     });
 });

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ConflictReportedMail;
 use App\Models\Calendar;
 use App\Models\Event;
 use App\Models\Group;
+use App\Models\GroupUser;
+use App\Models\Role;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -90,6 +94,42 @@ class EventController extends Controller
         return redirect()
             ->route('groups.calendars.events.index', [$group, $calendar])
             ->with('success', 'Event deleted successfully.');
+    }
+
+    /**
+     * A member reports that this event clashes with something else on
+     * their visible calendars. Recomputes the conflict server-side
+     * (never trusts the client's list) and emails the event's group
+     * admins so they can resolve it.
+     */
+    public function reportConflict(Request $request, Group $group, Calendar $calendar, Event $event): RedirectResponse
+    {
+        $this->authorize('view', $event);
+
+        $user = $request->user();
+
+        $conflictingTitles = Event::whereIn('calendar_id', $user->accessibleCalendarIds())
+            ->where('id', '!=', $event->id)
+            ->where('starts_at', '<', $event->ends_at)
+            ->where('ends_at', '>', $event->starts_at)
+            ->pluck('title');
+
+        if ($conflictingTitles->isEmpty()) {
+            return back()->with('success', 'No conflict found for this event anymore.');
+        }
+
+        $adminRoleId = Role::where('name', 'admin')->value('id');
+        $admins = GroupUser::where('group_id', $group->id)
+            ->where('role_id', $adminRoleId)
+            ->with('user')
+            ->get()
+            ->pluck('user');
+
+        foreach ($admins as $admin) {
+            Mail::to($admin->email)->send(new ConflictReportedMail($user, $event, $conflictingTitles));
+        }
+
+        return back()->with('success', 'Conflict reported to the group admin(s).');
     }
 
     /**

@@ -56,7 +56,7 @@ class RolePermissionSeeder extends Seeder
             'events.view',
         ])->pluck('id'));
 
-        $bootstrapEmail = env('SUPER_ADMIN_EMAIL', 'test@example.com');
+        $bootstrapEmail = config('app.super_admin_email');
         $bootstrapUser = User::where('email', $bootstrapEmail)->first();
 
         if ($bootstrapUser) {

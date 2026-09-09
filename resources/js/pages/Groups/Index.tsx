@@ -30,7 +30,7 @@ export default function GroupsIndex({ groups }: Props) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="text-xl leading-tight font-semibold text-gray-800">
                     {isSuperAdmin ? 'All Groups' : 'My Groups'}
                 </h2>
             }
@@ -38,7 +38,7 @@ export default function GroupsIndex({ groups }: Props) {
             <Head title={isSuperAdmin ? 'All Groups' : 'My Groups'} />
 
             {showToast && (
-                <div className="fixed right-4 top-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
+                <div className="fixed top-4 right-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
                     {flash?.success}
                 </div>
             )}
@@ -54,7 +54,7 @@ export default function GroupsIndex({ groups }: Props) {
                         {isSuperAdmin && (
                             <Link
                                 href={route('groups.create')}
-                                className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
                             >
                                 New Group
                             </Link>
@@ -75,10 +75,13 @@ export default function GroupsIndex({ groups }: Props) {
                                     <p className="mb-4 min-h-10 text-sm text-gray-500">
                                         {group.description || 'No description'}
                                     </p>
-                                    {typeof group.members_count === 'number' && (
+                                    {typeof group.members_count ===
+                                        'number' && (
                                         <p className="text-xs font-medium text-gray-400">
                                             {group.members_count}{' '}
-                                            {group.members_count === 1 ? 'member' : 'members'}
+                                            {group.members_count === 1
+                                                ? 'member'
+                                                : 'members'}
                                         </p>
                                     )}
                                 </Link>
@@ -97,7 +100,7 @@ export default function GroupsIndex({ groups }: Props) {
                             {isSuperAdmin && (
                                 <Link
                                     href={route('groups.create')}
-                                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
                                 >
                                     Create Your First Group
                                 </Link>

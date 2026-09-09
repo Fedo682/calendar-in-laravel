@@ -30,7 +30,11 @@ interface CalendarFormData {
     [key: string]: string;
 }
 
-export default function CalendarsIndex({ group, calendars, can_manage }: Props) {
+export default function CalendarsIndex({
+    group,
+    calendars,
+    can_manage,
+}: Props) {
     const { flash } = usePage().props as any;
     const [showToast, setShowToast] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -93,7 +97,11 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
     }
 
     function handleDelete(calendar: Calendar) {
-        if (confirm(`Delete calendar "${calendar.name}"? This cannot be undone.`)) {
+        if (
+            confirm(
+                `Delete calendar "${calendar.name}"? This cannot be undone.`,
+            )
+        ) {
             router.delete(`/groups/${group.id}/calendars/${calendar.id}`, {
                 preserveScroll: true,
             });
@@ -104,7 +112,7 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                    <h2 className="text-xl leading-tight font-semibold text-gray-800">
                         {group.name} — Calendars
                     </h2>
                     <Link
@@ -119,7 +127,7 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
             <Head title={`${group.name} - Calendars`} />
 
             {showToast && (
-                <div className="fixed right-4 top-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
+                <div className="fixed top-4 right-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
                     {flash?.success}
                 </div>
             )}
@@ -133,7 +141,7 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
                         {can_manage && (
                             <button
                                 onClick={openCreateDialog}
-                                className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
                             >
                                 New Calendar
                             </button>
@@ -151,7 +159,8 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
                                         <span
                                             className="h-2.5 w-2.5 shrink-0 rounded-full"
                                             style={{
-                                                backgroundColor: calendar.color || '#6366f1',
+                                                backgroundColor:
+                                                    calendar.color || '#6366f1',
                                             }}
                                         />
                                         <h3 className="text-base font-semibold text-gray-900">
@@ -159,26 +168,31 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
                                         </h3>
                                     </div>
                                     <p className="mb-4 min-h-10 text-sm text-gray-500">
-                                        {calendar.description || 'No description'}
+                                        {calendar.description ||
+                                            'No description'}
                                     </p>
                                     <div className="flex gap-2">
                                         <a
                                             href={`/groups/${group.id}/calendars/${calendar.id}`}
-                                            className="flex-1 rounded-md bg-gray-800 px-3 py-1.5 text-center text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                            className="flex-1 rounded-md bg-gray-800 px-3 py-1.5 text-center text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
                                         >
                                             View
                                         </a>
                                         {can_manage && (
                                             <>
                                                 <button
-                                                    onClick={() => openEditDialog(calendar)}
-                                                    className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-gray-600 transition hover:bg-gray-50"
+                                                    onClick={() =>
+                                                        openEditDialog(calendar)
+                                                    }
+                                                    className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold tracking-widest text-gray-600 uppercase transition hover:bg-gray-50"
                                                 >
                                                     Edit
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(calendar)}
-                                                    className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest text-red-500 transition hover:bg-red-50"
+                                                    onClick={() =>
+                                                        handleDelete(calendar)
+                                                    }
+                                                    className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold tracking-widest text-red-500 uppercase transition hover:bg-red-50"
                                                 >
                                                     Delete
                                                 </button>
@@ -201,7 +215,7 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
                             {can_manage && (
                                 <button
                                     onClick={openCreateDialog}
-                                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
                                 >
                                     Create Your First Calendar
                                 </button>
@@ -212,7 +226,11 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
             </div>
 
             {/* Create / Edit Dialog */}
-            <Dialog open={dialogOpen} onClose={closeDialog} className="relative z-50">
+            <Dialog
+                open={dialogOpen}
+                onClose={closeDialog}
+                className="relative z-50"
+            >
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 <div className="fixed inset-0 flex items-center justify-center p-4">
                     <DialogPanel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
@@ -222,40 +240,57 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
 
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
+                                <label
+                                    htmlFor="name"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
                                     Name
                                 </label>
                                 <input
                                     id="name"
                                     type="text"
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('name', e.target.value)
+                                    }
                                     className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     autoFocus
                                 />
                                 {errors.name && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.name}
+                                    </p>
                                 )}
                             </div>
 
                             <div>
-                                <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700">
+                                <label
+                                    htmlFor="description"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
                                     Description
                                 </label>
                                 <textarea
                                     id="description"
                                     value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('description', e.target.value)
+                                    }
                                     rows={3}
                                     className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                 />
                                 {errors.description && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.description}
+                                    </p>
                                 )}
                             </div>
 
                             <div>
-                                <label htmlFor="color" className="mb-1 block text-sm font-medium text-gray-700">
+                                <label
+                                    htmlFor="color"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
                                     Color
                                 </label>
                                 <div className="flex items-center gap-3">
@@ -263,19 +298,25 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
                                         id="color"
                                         type="color"
                                         value={data.color || '#4f46e5'}
-                                        onChange={(e) => setData('color', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('color', e.target.value)
+                                        }
                                         className="h-9 w-12 rounded-md border-gray-300"
                                     />
                                     <input
                                         type="text"
                                         value={data.color}
-                                        onChange={(e) => setData('color', e.target.value)}
+                                        onChange={(e) =>
+                                            setData('color', e.target.value)
+                                        }
                                         placeholder="#4f46e5"
                                         className="flex-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                     />
                                 </div>
                                 {errors.color && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.color}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.color}
+                                    </p>
                                 )}
                             </div>
 
@@ -285,7 +326,9 @@ export default function CalendarsIndex({ group, calendars, can_manage }: Props) 
                                     disabled={processing}
                                     className="flex-1 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
                                 >
-                                    {editing ? 'Save Changes' : 'Create Calendar'}
+                                    {editing
+                                        ? 'Save Changes'
+                                        : 'Create Calendar'}
                                 </button>
                                 <button
                                     type="button"

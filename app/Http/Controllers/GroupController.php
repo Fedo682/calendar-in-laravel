@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Group;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -60,7 +61,7 @@ class GroupController extends Controller
 
         $members = $group->members()
             ->get()
-            ->map(function ($member) {
+            ->map(function (User $member) {
                 return [
                     'id' => $member->id,
                     'name' => $member->name,

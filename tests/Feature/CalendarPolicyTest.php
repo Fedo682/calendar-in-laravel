@@ -26,7 +26,7 @@ function makeGroupWithCalendarRole(?string $role): array
 test('admin can view, create, update and delete calendars in their group', function () {
     [$group, $admin] = makeGroupWithCalendarRole('admin');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
-    $policy = new CalendarPolicy();
+    $policy = new CalendarPolicy;
 
     expect($policy->viewAny($admin, $group))->toBeTrue();
     expect($policy->view($admin, $calendar))->toBeTrue();
@@ -38,7 +38,7 @@ test('admin can view, create, update and delete calendars in their group', funct
 test('member can view but not create, update or delete calendars', function () {
     [$group, $member] = makeGroupWithCalendarRole('member');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
-    $policy = new CalendarPolicy();
+    $policy = new CalendarPolicy;
 
     expect($policy->viewAny($member, $group))->toBeTrue();
     expect($policy->view($member, $calendar))->toBeTrue();
@@ -50,7 +50,7 @@ test('member can view but not create, update or delete calendars', function () {
 test('non-member cannot view, create, update or delete calendars', function () {
     [$group, $outsider] = makeGroupWithCalendarRole(null);
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
-    $policy = new CalendarPolicy();
+    $policy = new CalendarPolicy;
 
     expect($policy->viewAny($outsider, $group))->toBeFalse();
     expect($policy->view($outsider, $calendar))->toBeFalse();

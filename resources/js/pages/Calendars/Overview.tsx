@@ -22,7 +22,7 @@ export default function CalendarsOverview({ calendars }: Props) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                <h2 className="text-xl leading-tight font-semibold text-gray-800">
                     Calendars
                 </h2>
             }
@@ -49,7 +49,8 @@ export default function CalendarsOverview({ calendars }: Props) {
                                                     className="h-2.5 w-2.5 shrink-0 rounded-full"
                                                     style={{
                                                         backgroundColor:
-                                                            calendar.color || '#6366f1',
+                                                            calendar.color ||
+                                                            '#6366f1',
                                                     }}
                                                 />
                                                 <div className="min-w-0">
@@ -57,7 +58,8 @@ export default function CalendarsOverview({ calendars }: Props) {
                                                         {calendar.name}
                                                     </p>
                                                     <p className="truncate text-xs text-gray-500">
-                                                        {calendar.description || 'No description'}
+                                                        {calendar.description ||
+                                                            'No description'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -75,11 +77,12 @@ export default function CalendarsOverview({ calendars }: Props) {
                                 No calendars yet
                             </h3>
                             <p className="mt-1 text-sm text-gray-500">
-                                Calendars created within your groups will show up here.
+                                Calendars created within your groups will show
+                                up here.
                             </p>
                             <Link
                                 href="/groups"
-                                className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
                             >
                                 View your groups
                             </Link>

@@ -43,6 +43,7 @@ export default function GroupsShow({
     const { flash } = usePage().props as any;
     const [showToast, setShowToast] = useState(false);
     const [showAddMember, setShowAddMember] = useState(false);
+    const [showBulkAdd, setShowBulkAdd] = useState(false);
 
     useEffect(() => {
         if (flash?.success) {
@@ -68,6 +69,22 @@ export default function GroupsShow({
         });
     };
 
+    const bulkForm = useForm({
+        emails: '',
+        role: 'member',
+    });
+
+    const submitBulkAdd: FormEventHandler = (e) => {
+        e.preventDefault();
+        bulkForm.post(route('groups.members.bulk', group.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                bulkForm.reset();
+                setShowBulkAdd(false);
+            },
+        });
+    };
+
     const changeRole = (member: Member, role: 'admin' | 'member') => {
         router.put(
             route('groups.members.update', [group.id, member.id]),
@@ -89,7 +106,7 @@ export default function GroupsShow({
         <AuthenticatedLayout
             header={
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                    <h2 className="text-xl leading-tight font-semibold text-gray-800">
                         {group.name}
                     </h2>
                     <Link
@@ -104,7 +121,7 @@ export default function GroupsShow({
             <Head title={group.name} />
 
             {showToast && (
-                <div className="fixed right-4 top-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
+                <div className="fixed top-4 right-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
                     {flash?.success}
                 </div>
             )}
@@ -164,12 +181,24 @@ export default function GroupsShow({
                                         Members
                                     </h3>
                                     {can_manage && (
-                                        <button
-                                            onClick={() => setShowAddMember(true)}
-                                            className="text-xs font-medium text-gray-500 hover:text-gray-800"
-                                        >
-                                            + Add
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() =>
+                                                    setShowBulkAdd(true)
+                                                }
+                                                className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                                            >
+                                                Bulk add
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    setShowAddMember(true)
+                                                }
+                                                className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                                            >
+                                                + Add
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
 
@@ -205,24 +234,29 @@ export default function GroupsShow({
                                                                 onClick={() =>
                                                                     changeRole(
                                                                         member,
-                                                                        member.role === 'admin'
+                                                                        member.role ===
+                                                                            'admin'
                                                                             ? 'member'
                                                                             : 'admin',
                                                                     )
                                                                 }
                                                                 className="text-xs font-medium text-gray-500 hover:text-gray-800"
                                                             >
-                                                                {member.role === 'admin'
+                                                                {member.role ===
+                                                                'admin'
                                                                     ? 'Demote'
                                                                     : 'Promote'}
                                                             </button>
                                                         )}
                                                         {(is_super_admin ||
-                                                            member.role !== 'admin') && (
+                                                            member.role !==
+                                                                'admin') && (
                                                             <button
                                                                 title="Remove member"
                                                                 onClick={() =>
-                                                                    removeMember(member)
+                                                                    removeMember(
+                                                                        member,
+                                                                    )
                                                                 }
                                                                 className="text-xs font-medium text-red-500 hover:text-red-700"
                                                             >
@@ -270,13 +304,19 @@ export default function GroupsShow({
                                     id="user_id"
                                     type="number"
                                     value={data.user_id}
-                                    onChange={(e) => setData('user_id', e.target.value)}
-                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                                        errors.user_id ? 'border-red-500' : 'border-gray-300'
+                                    onChange={(e) =>
+                                        setData('user_id', e.target.value)
+                                    }
+                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                        errors.user_id
+                                            ? 'border-red-500'
+                                            : 'border-gray-300'
                                     }`}
                                 />
                                 {errors.user_id && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.user_id}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.user_id}
+                                    </p>
                                 )}
                             </div>
 
@@ -290,14 +330,20 @@ export default function GroupsShow({
                                 <select
                                     id="role"
                                     value={data.role}
-                                    onChange={(e) => setData('role', e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    onChange={(e) =>
+                                        setData('role', e.target.value)
+                                    }
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 >
                                     <option value="member">Member</option>
-                                    {is_super_admin && <option value="admin">Admin</option>}
+                                    {is_super_admin && (
+                                        <option value="admin">Admin</option>
+                                    )}
                                 </select>
                                 {errors.role && (
-                                    <p className="mt-1 text-sm text-red-600">{errors.role}</p>
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {errors.role}
+                                    </p>
                                 )}
                             </div>
 
@@ -315,6 +361,102 @@ export default function GroupsShow({
                                     className="flex-1 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
                                 >
                                     {processing ? 'Adding...' : 'Add'}
+                                </button>
+                            </div>
+                        </form>
+                    </DialogPanel>
+                </div>
+            </Dialog>
+
+            {/* Bulk Add Members Modal */}
+            <Dialog
+                open={showBulkAdd}
+                onClose={() => setShowBulkAdd(false)}
+                className="relative z-50"
+            >
+                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <DialogPanel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+                        <DialogTitle className="mb-1 text-base font-semibold text-gray-900">
+                            Bulk Add Members
+                        </DialogTitle>
+                        <p className="mb-4 text-sm text-gray-500">
+                            Paste emails separated by commas, spaces, or one per
+                            line. Each person gets an email in the background
+                            once added.
+                        </p>
+                        <form onSubmit={submitBulkAdd} className="space-y-4">
+                            <div>
+                                <label
+                                    htmlFor="emails"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
+                                    Emails
+                                </label>
+                                <textarea
+                                    id="emails"
+                                    rows={5}
+                                    value={bulkForm.data.emails}
+                                    onChange={(e) =>
+                                        bulkForm.setData(
+                                            'emails',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder={
+                                        'jane@example.com\njohn@example.com'
+                                    }
+                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
+                                        bulkForm.errors.emails
+                                            ? 'border-red-500'
+                                            : 'border-gray-300'
+                                    }`}
+                                />
+                                {bulkForm.errors.emails && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {bulkForm.errors.emails}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="bulk_role"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
+                                    Role
+                                </label>
+                                <select
+                                    id="bulk_role"
+                                    value={bulkForm.data.role}
+                                    onChange={(e) =>
+                                        bulkForm.setData('role', e.target.value)
+                                    }
+                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                >
+                                    <option value="member">Member</option>
+                                    {is_super_admin && (
+                                        <option value="admin">Admin</option>
+                                    )}
+                                </select>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBulkAdd(false)}
+                                    className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={bulkForm.processing}
+                                    className="flex-1 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
+                                >
+                                    {bulkForm.processing
+                                        ? 'Adding...'
+                                        : 'Add All'}
                                 </button>
                             </div>
                         </form>

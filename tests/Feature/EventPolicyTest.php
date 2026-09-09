@@ -28,7 +28,7 @@ function makeCalendarWithEventRole(?string $role): array
 test('admin can view, create, update and delete events on calendars in their group', function () {
     [$calendar, $admin] = makeCalendarWithEventRole('admin');
     $event = Event::factory()->create(['calendar_id' => $calendar->id]);
-    $policy = new EventPolicy();
+    $policy = new EventPolicy;
 
     expect($policy->viewAny($admin, $calendar))->toBeTrue();
     expect($policy->view($admin, $event))->toBeTrue();
@@ -40,7 +40,7 @@ test('admin can view, create, update and delete events on calendars in their gro
 test('member can view but not create, update or delete events', function () {
     [$calendar, $member] = makeCalendarWithEventRole('member');
     $event = Event::factory()->create(['calendar_id' => $calendar->id]);
-    $policy = new EventPolicy();
+    $policy = new EventPolicy;
 
     expect($policy->viewAny($member, $calendar))->toBeTrue();
     expect($policy->view($member, $event))->toBeTrue();
@@ -52,7 +52,7 @@ test('member can view but not create, update or delete events', function () {
 test('non-member cannot view, create, update or delete events', function () {
     [$calendar, $outsider] = makeCalendarWithEventRole(null);
     $event = Event::factory()->create(['calendar_id' => $calendar->id]);
-    $policy = new EventPolicy();
+    $policy = new EventPolicy;
 
     expect($policy->viewAny($outsider, $calendar))->toBeFalse();
     expect($policy->view($outsider, $event))->toBeFalse();

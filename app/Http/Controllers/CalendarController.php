@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Calendar;
 use App\Models\Group;
-use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,12 +20,10 @@ class CalendarController extends Controller
     {
         $user = $request->user();
 
-        $calendars = $user->isSuperAdmin()
-            ? Calendar::with('group')->orderBy('name')->get()
-            : Calendar::with('group')
-                ->whereIn('group_id', $user->memberGroups()->pluck('groups.id'))
-                ->orderBy('name')
-                ->get();
+        $calendars = Calendar::with('group')
+            ->whereIn('id', $user->accessibleCalendarIds())
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('Calendars/Overview', [
             'calendars' => $calendars,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AddedToGroupMail;
 use App\Models\Group;
 use App\Models\GroupUser;
 use App\Models\Role;
@@ -10,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -47,7 +49,71 @@ class GroupMembershipController extends Controller
             ['role_id' => Role::where('name', $validated['role'])->value('id')],
         );
 
+        $newMember = User::findOrFail((int) $validated['user_id']);
+        Mail::to($newMember->email)->send(new AddedToGroupMail($group, $validated['role']));
+
         return back()->with('success', 'Member added successfully!');
+    }
+
+    /**
+     * Add many members at once by email. Membership rows are created
+     * synchronously (cheap, and lets us report which emails didn't match
+     * a user right away); the notification email per member is queued
+     * (implements ShouldQueue - see AddedToGroupMail) since sending N
+     * emails inline would otherwise block this request for however long
+     * N round-trips to the mail server take.
+     */
+    public function bulkStore(Request $request, Group $group): RedirectResponse
+    {
+        Gate::authorize('manageMembers', $group);
+
+        $validated = $request->validate([
+            'emails' => ['required', 'string'],
+            'role' => ['required', Rule::in(['admin', 'member'])],
+        ]);
+
+        $this->guardAdminRoleAssignment($validated['role']);
+
+        $roleId = Role::where('name', $validated['role'])->value('id');
+
+        $candidates = collect(preg_split('/[\s,]+/', trim($validated['emails'])) ?: [])
+            ->filter()
+            ->unique()
+            ->values();
+
+        $added = [];
+        $notFound = [];
+
+        foreach ($candidates as $email) {
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $notFound[] = $email;
+
+                continue;
+            }
+
+            $user = User::where('email', $email)->first();
+
+            if (! $user) {
+                $notFound[] = $email;
+
+                continue;
+            }
+
+            GroupUser::updateOrCreate(
+                ['group_id' => $group->id, 'user_id' => $user->id],
+                ['role_id' => $roleId],
+            );
+
+            Mail::to($user->email)->send(new AddedToGroupMail($group, $validated['role']));
+            $added[] = $email;
+        }
+
+        $summary = count($added).' member(s) added.';
+        if ($notFound) {
+            $summary .= ' No account found for: '.implode(', ', $notFound).'.';
+        }
+
+        return back()->with('success', $summary);
     }
 
     public function update(Request $request, Group $group, User $user): RedirectResponse

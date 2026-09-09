@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bootstrap Super Admin
+    |--------------------------------------------------------------------------
+    |
+    | The email address RolePermissionSeeder grants the platform-wide
+    | 'super_admin' role to when seeding. Only used at seed time.
+    |
+    */
+
+    'super_admin_email' => env('SUPER_ADMIN_EMAIL', 'test@example.com'),
+
 ];
