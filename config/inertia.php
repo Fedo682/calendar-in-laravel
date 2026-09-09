@@ -24,6 +24,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Initial Page Element
+    |--------------------------------------------------------------------------
+    |
+    | The installed @inertiajs/react package (v3) reads the initial page data
+    | from a <script data-page="..." type="application/json"> element rather
+    | than the legacy <div data-page="..."> attribute. This must be true to
+    | match the client-side package version.
+    |
+    */
+
+    'use_script_element_for_initial_page' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Pages
     |--------------------------------------------------------------------------
     |

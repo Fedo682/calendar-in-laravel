@@ -30,6 +30,21 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Dashboard
                                 </NavLink>
+                                <NavLink
+                                    href={route('groups.index')}
+                                    active={route().current('groups.*')}
+                                >
+                                    Groups
+                                </NavLink>
+                                <NavLink
+                                    href={route('calendars.index')}
+                                    active={
+                                        route().current('calendars.index') ||
+                                        route().current('groups.calendars.*')
+                                    }
+                                >
+                                    Calendars
+                                </NavLink>
                             </div>
                         </div>
 
@@ -133,6 +148,21 @@ export default function AuthenticatedLayout({ header, children }) {
                             active={route().current('dashboard')}
                         >
                             Dashboard
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('groups.index')}
+                            active={route().current('groups.*')}
+                        >
+                            Groups
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('calendars.index')}
+                            active={
+                                route().current('calendars.index') ||
+                                route().current('groups.calendars.*')
+                            }
+                        >
+                            Calendars
                         </ResponsiveNavLink>
                     </div>
 

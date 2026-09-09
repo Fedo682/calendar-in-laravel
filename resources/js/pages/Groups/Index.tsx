@@ -1,3 +1,4 @@
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
@@ -6,6 +7,7 @@ interface Group {
     name: string;
     description: string | null;
     created_at: string;
+    members_count?: number;
 }
 
 interface Props {
@@ -13,7 +15,8 @@ interface Props {
 }
 
 export default function GroupsIndex({ groups }: Props) {
-    const { flash } = usePage().props as any;
+    const { flash, auth } = usePage().props as any;
+    const isSuperAdmin = Boolean(auth?.is_super_admin);
     const [showToast, setShowToast] = useState(false);
 
     useEffect(() => {
@@ -25,83 +28,84 @@ export default function GroupsIndex({ groups }: Props) {
     }, [flash]);
 
     return (
-        <>
-            <Head title="My Groups" />
+        <AuthenticatedLayout
+            header={
+                <h2 className="text-xl font-semibold leading-tight text-gray-800">
+                    {isSuperAdmin ? 'All Groups' : 'My Groups'}
+                </h2>
+            }
+        >
+            <Head title={isSuperAdmin ? 'All Groups' : 'My Groups'} />
 
-            {/* Success Toast */}
             {showToast && (
-                <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-pulse z-50">
-                    ✓ {flash?.success}
+                <div className="fixed right-4 top-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
+                    {flash?.success}
                 </div>
             )}
 
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-                <div className="max-w-6xl mx-auto">
-                    {/* Header */}
-                    <div className="mb-8 flex justify-between items-center">
-                        <div>
-                            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                                My Groups
-                            </h1>
-                            <p className="text-gray-600">
-                                Manage all your calendar groups in one place
-                            </p>
-                        </div>
-                        <Link
-                            href="/groups/create"
-                            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition"
-                        >
-                            + Create Group
-                        </Link>
+            <div className="py-8">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="mb-6 flex items-center justify-between">
+                        <p className="text-sm text-gray-500">
+                            {isSuperAdmin
+                                ? 'Every group on the platform.'
+                                : 'Groups you belong to.'}
+                        </p>
+                        {isSuperAdmin && (
+                            <Link
+                                href={route('groups.create')}
+                                className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                            >
+                                New Group
+                            </Link>
+                        )}
                     </div>
 
-                    {/* Groups List */}
                     {groups.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                             {groups.map((group) => (
-                                <div
+                                <Link
                                     key={group.id}
-                                    className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition"
+                                    href={route('groups.show', group.id)}
+                                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-gray-300 hover:shadow-md"
                                 >
-                                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                    <h3 className="mb-1 text-base font-semibold text-gray-900">
                                         {group.name}
                                     </h3>
-                                    <p className="text-gray-600 mb-4 min-h-12">
+                                    <p className="mb-4 min-h-10 text-sm text-gray-500">
                                         {group.description || 'No description'}
                                     </p>
-                                    <div className="flex gap-3">
-                                        <Link
-                                            href={`/groups/${group.id}`}
-                                            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-center font-medium transition"
-                                        >
-                                            View
-                                        </Link>
-                                        <button className="flex-1 px-4 py-2 border-2 border-indigo-600 text-indigo-600 rounded hover:bg-indigo-50 font-medium transition">
-                                            Edit
-                                        </button>
-                                    </div>
-                                </div>
+                                    {typeof group.members_count === 'number' && (
+                                        <p className="text-xs font-medium text-gray-400">
+                                            {group.members_count}{' '}
+                                            {group.members_count === 1 ? 'member' : 'members'}
+                                        </p>
+                                    )}
+                                </Link>
                             ))}
                         </div>
                     ) : (
-                        <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-                            <div className="text-6xl mb-4">📭</div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                No Groups Yet
-                            </h2>
-                            <p className="text-gray-600 mb-6">
-                                Create your first group to get started organizing your calendar
+                        <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                            <h3 className="text-sm font-semibold text-gray-900">
+                                No groups yet
+                            </h3>
+                            <p className="mt-1 text-sm text-gray-500">
+                                {isSuperAdmin
+                                    ? 'Create your first group to get started.'
+                                    : 'You are not a member of any groups yet. Ask a group admin to add you.'}
                             </p>
-                            <Link
-                                href="/groups/create"
-                                className="inline-block px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold transition"
-                            >
-                                Create Your First Group
-                            </Link>
+                            {isSuperAdmin && (
+                                <Link
+                                    href={route('groups.create')}
+                                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition hover:bg-gray-700"
+                                >
+                                    Create Your First Group
+                                </Link>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
-        </>
+        </AuthenticatedLayout>
     );
 }

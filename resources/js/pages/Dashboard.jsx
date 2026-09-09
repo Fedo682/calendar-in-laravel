@@ -1,7 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 export default function Dashboard() {
+    const { auth } = usePage().props;
+    const isSuperAdmin = Boolean(auth?.is_super_admin);
+
     return (
         <AuthenticatedLayout
             header={
@@ -12,30 +15,45 @@ export default function Dashboard() {
         >
             <Head title="Dashboard" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Welcome Card */}
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
-                            <div className="p-6 text-gray-900">
-                                <h3 className="text-lg font-semibold mb-2">Welcome! 👋</h3>
-                                <p>You're logged in and ready to manage your calendar groups.</p>
-                            </div>
-                        </div>
+            <div className="py-8">
+                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                    <div className="mb-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                            Welcome back, {auth?.user?.name}
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                            {isSuperAdmin
+                                ? "You're a Super Admin — you can create groups and assign group admins."
+                                : "Here's a quick way into your groups and calendars."}
+                        </p>
+                    </div>
 
-                        {/* Groups Card */}
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg hover:shadow-lg transition">
-                            <div className="p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">📅 My Groups</h3>
-                                <p className="text-gray-600 mb-4">View and manage all your calendar groups</p>
-                                <Link
-                                    href="/groups"
-                                    className="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium transition"
-                                >
-                                    Go to Groups →
-                                </Link>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <Link
+                            href="/groups"
+                            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                        >
+                            <h3 className="mb-1 text-base font-semibold text-gray-900">
+                                Groups
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                {isSuperAdmin
+                                    ? 'Manage every group in the system'
+                                    : 'View the groups you belong to'}
+                            </p>
+                        </Link>
+
+                        <Link
+                            href="/calendars"
+                            className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                        >
+                            <h3 className="mb-1 text-base font-semibold text-gray-900">
+                                Calendars
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                                Browse every calendar you have access to
+                            </p>
+                        </Link>
                     </div>
                 </div>
             </div>
