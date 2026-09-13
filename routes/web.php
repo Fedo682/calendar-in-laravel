@@ -57,6 +57,35 @@ Route::middleware('auth')->group(function () {
                 ->name('events.report-conflict');
         });
     });
+
+    // ===================================================================
+    // PERSONAL CALENDARS & EVENT VISIBILITY
+    // ===================================================================
+
+    // ===================================================================
+    // USER PREFERENCES (timezone, appearance)
+    // ===================================================================
+
+    // ===================================================================
+    // SETTINGS: ICS FEED TOKENS
+    // ===================================================================
+
+    // ===================================================================
+    // SETTINGS: GOOGLE CALENDAR SYNC
+    // ===================================================================
 });
+
+// =======================================================================
+// UNAUTHENTICATED MACHINE ENDPOINTS
+//
+// Routes below are reached by external clients rather than by a browser
+// session: subscribing calendar apps and Google's push notifications.
+// They authenticate on their own credentials and must be registered with
+// the session middleware stripped, so no cookie is ever issued to them.
+// =======================================================================
+
+// ---- ICS subscription feed ----
+
+// ---- Google push notification webhook ----
 
 require __DIR__.'/auth.php';

@@ -19,6 +19,10 @@ use Illuminate\Support\Collection;
  * @property string $name
  * @property string $email
  * @property Carbon|null $email_verified_at
+ * @property string|null $timezone IANA identifier; added by the user-preferences migration.
+ * @property string|null $theme system|light|dark; added by the user-preferences migration.
+ * @property int|null $week_starts_on 0=Sunday; added by the user-preferences migration.
+ * @property string|null $time_format 12h|24h; added by the user-preferences migration.
  * @property string $password
  * @property string|null $remember_token
  * @property Carbon|null $created_at

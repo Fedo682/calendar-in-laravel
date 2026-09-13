@@ -4,18 +4,8 @@ use App\Mail\ConflictReportedMail;
 use App\Models\Calendar;
 use App\Models\Event;
 use App\Models\Group;
-use App\Models\GroupUser;
-use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
-
-function attachConflictTestRole(Group $group, User $user, string $role): void
-{
-    GroupUser::updateOrCreate(
-        ['group_id' => $group->id, 'user_id' => $user->id],
-        ['role_id' => Role::firstOrCreate(['name' => $role])->id],
-    );
-}
 
 test('reporting a real conflict emails the group admins', function () {
     Mail::fake();
@@ -23,8 +13,8 @@ test('reporting a real conflict emails the group admins', function () {
     $group = Group::factory()->create();
     $admin = User::factory()->create();
     $member = User::factory()->create();
-    attachConflictTestRole($group, $admin, 'admin');
-    attachConflictTestRole($group, $member, 'member');
+    asGroupRole($group, $admin, 'admin');
+    asGroupRole($group, $member, 'member');
 
     $calendarA = Calendar::factory()->create(['group_id' => $group->id]);
     $calendarB = Calendar::factory()->create(['group_id' => $group->id]);
@@ -58,7 +48,7 @@ test('reporting a non-existent conflict does not send mail', function () {
 
     $group = Group::factory()->create();
     $member = User::factory()->create();
-    attachConflictTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $event = Event::factory()->create(['calendar_id' => $calendar->id]);
 

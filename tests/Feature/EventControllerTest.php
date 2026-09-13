@@ -3,24 +3,15 @@
 use App\Models\Calendar;
 use App\Models\Event;
 use App\Models\Group;
-use App\Models\GroupUser;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-
-function attachEventTestRole(Group $group, User $user, string $role): void
-{
-    GroupUser::updateOrCreate(
-        ['group_id' => $group->id, 'user_id' => $user->id],
-        ['role_id' => Role::firstOrCreate(['name' => $role])->id],
-    );
-}
 
 test('group admin can view the events index', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $admin = User::factory()->create();
-    attachEventTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
 
     $this->actingAs($admin)
         ->get("/groups/{$group->id}/calendars/{$calendar->id}/events")
@@ -31,7 +22,7 @@ test('group member can view the events index', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $member = User::factory()->create();
-    attachEventTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
 
     $this->actingAs($member)
         ->get("/groups/{$group->id}/calendars/{$calendar->id}/events")
@@ -52,7 +43,7 @@ test('group admin can create an event', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $admin = User::factory()->create();
-    attachEventTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
 
     $response = $this->actingAs($admin)->post(
         "/groups/{$group->id}/calendars/{$calendar->id}/events",
@@ -75,7 +66,7 @@ test('event creation rejects an end time before the start time', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $admin = User::factory()->create();
-    attachEventTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
 
     $this->actingAs($admin)->post(
         "/groups/{$group->id}/calendars/{$calendar->id}/events",
@@ -93,7 +84,7 @@ test('group member cannot create an event', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $member = User::factory()->create();
-    attachEventTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
 
     $this->actingAs($member)->post(
         "/groups/{$group->id}/calendars/{$calendar->id}/events",
@@ -111,7 +102,7 @@ test('group admin can update and delete an event', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $admin = User::factory()->create();
-    attachEventTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
     $event = Event::factory()->create(['calendar_id' => $calendar->id]);
 
     $this->actingAs($admin)->put(
@@ -134,7 +125,7 @@ test('group member cannot update or delete an event', function () {
     $group = Group::factory()->create();
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
     $member = User::factory()->create();
-    attachEventTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
     $event = Event::factory()->create(['calendar_id' => $calendar->id, 'title' => 'Original']);
 
     $this->actingAs($member)->put(
@@ -158,7 +149,7 @@ test('an event from another calendar 404s via implicit scope binding', function 
     $calendarA = Calendar::factory()->create(['group_id' => $group->id]);
     $calendarB = Calendar::factory()->create(['group_id' => $group->id]);
     $admin = User::factory()->create();
-    attachEventTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
     $eventInB = Event::factory()->create(['calendar_id' => $calendarB->id]);
 
     $this->actingAs($admin)
