@@ -1,9 +1,12 @@
-import { FormEvent, useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import DayView from '@/components/Calendar/DayView';
+import MonthGrid from '@/components/Calendar/MonthGrid';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import type { CalendarEvent } from '@/types/calendar';
+import { usePageProps } from '@/types/shared';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import MonthGrid, { CalendarEvent } from '@/Components/Calendar/MonthGrid';
-import DayView from '@/Components/Calendar/DayView';
+import { Head, Link, useForm } from '@inertiajs/react';
+import type { FormEvent, ReactNode } from 'react';
+import { useState } from 'react';
 
 interface Group {
     id: number;
@@ -173,31 +176,7 @@ export default function EventsIndex({
     });
 
     return (
-        <AuthenticatedLayout
-            header={
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                            {calendar.name}
-                        </h2>
-                        <p className="text-sm text-gray-500">{group.name}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {!can_manage && (
-                            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                                View only
-                            </span>
-                        )}
-                        <Link
-                            href={`/groups/${group.id}/calendars`}
-                            className="text-sm font-medium text-gray-500 hover:text-gray-800"
-                        >
-                            Back to calendars
-                        </Link>
-                    </div>
-                </div>
-            }
-        >
+        <>
             <Head title={`${calendar.name} - ${group.name}`} />
 
             <div className="py-8">
@@ -444,6 +423,38 @@ export default function EventsIndex({
                     </DialogPanel>
                 </div>
             </Dialog>
-        </AuthenticatedLayout>
+        </>
     );
 }
+
+function EventsHeading() {
+    const { group, calendar, can_manage } = usePageProps<Props>();
+
+    return (
+        <div className="flex items-center justify-between">
+            <div>
+                <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                    {calendar.name}
+                </h2>
+                <p className="text-sm text-gray-500">{group.name}</p>
+            </div>
+            <div className="flex items-center gap-3">
+                {!can_manage && (
+                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                        View only
+                    </span>
+                )}
+                <Link
+                    href={`/groups/${group.id}/calendars`}
+                    className="text-sm font-medium text-gray-500 hover:text-gray-800"
+                >
+                    Back to calendars
+                </Link>
+            </div>
+        </div>
+    );
+}
+
+EventsIndex.layout = (page: ReactNode) => (
+    <AuthenticatedLayout header={<EventsHeading />}>{page}</AuthenticatedLayout>
+);

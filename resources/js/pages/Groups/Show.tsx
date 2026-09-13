@@ -1,12 +1,12 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import type { GroupSummary } from '@/types/calendar';
+import { usePageProps } from '@/types/shared';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { FormEventHandler, useEffect, useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import type { FormEventHandler, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 
-interface GroupProp {
-    id: number;
-    name: string;
-    description: string | null;
+interface GroupProp extends GroupSummary {
     created_at: string;
 }
 
@@ -40,7 +40,7 @@ export default function GroupsShow({
     can_manage,
     is_super_admin,
 }: Props) {
-    const { flash } = usePage().props as any;
+    const { flash } = usePageProps();
     const [showToast, setShowToast] = useState(false);
     const [showAddMember, setShowAddMember] = useState(false);
     const [showBulkAdd, setShowBulkAdd] = useState(false);
@@ -103,21 +103,7 @@ export default function GroupsShow({
     };
 
     return (
-        <AuthenticatedLayout
-            header={
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                        {group.name}
-                    </h2>
-                    <Link
-                        href={route('groups.index')}
-                        className="text-sm font-medium text-gray-500 hover:text-gray-800"
-                    >
-                        Back to groups
-                    </Link>
-                </div>
-            }
-        >
+        <>
             <Head title={group.name} />
 
             {showToast && (
@@ -463,6 +449,28 @@ export default function GroupsShow({
                     </DialogPanel>
                 </div>
             </Dialog>
-        </AuthenticatedLayout>
+        </>
     );
 }
+
+function GroupHeading() {
+    const { group } = usePageProps<{ group: GroupProp }>();
+
+    return (
+        <div className="flex items-center justify-between">
+            <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                {group.name}
+            </h2>
+            <Link
+                href={route('groups.index')}
+                className="text-sm font-medium text-gray-500 hover:text-gray-800"
+            >
+                Back to groups
+            </Link>
+        </div>
+    );
+}
+
+GroupsShow.layout = (page: ReactNode) => (
+    <AuthenticatedLayout header={<GroupHeading />}>{page}</AuthenticatedLayout>
+);

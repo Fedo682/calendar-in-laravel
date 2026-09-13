@@ -1,7 +1,7 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import PrimaryButton from '@/Components/PrimaryButton';
-import { FormEventHandler } from 'react';
+import PrimaryButton from '@/components/PrimaryButton';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import { Head, useForm } from '@inertiajs/react';
+import type { FormEventHandler, ReactNode } from 'react';
 
 export default function CreateGroup() {
     const { data, setData, post, processing, errors } = useForm({
@@ -15,13 +15,7 @@ export default function CreateGroup() {
     };
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                    Create a New Group
-                </h2>
-            }
-        >
+        <>
             <Head title="Create Group" />
 
             <div className="py-8">
@@ -94,6 +88,18 @@ export default function CreateGroup() {
                     </div>
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </>
     );
 }
+
+CreateGroup.layout = (page: ReactNode) => (
+    <AuthenticatedLayout
+        header={
+            <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                Create a New Group
+            </h2>
+        }
+    >
+        {page}
+    </AuthenticatedLayout>
+);

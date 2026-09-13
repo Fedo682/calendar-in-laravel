@@ -1,13 +1,12 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import type { GroupSummary } from '@/types/calendar';
+import { usePageProps } from '@/types/shared';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { FormEvent, useEffect, useState } from 'react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import type { FormEvent, ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 
-interface Group {
-    id: number;
-    name: string;
-    description: string | null;
-}
+type Group = GroupSummary;
 
 interface Calendar {
     id: number;
@@ -35,7 +34,7 @@ export default function CalendarsIndex({
     calendars,
     can_manage,
 }: Props) {
-    const { flash } = usePage().props as any;
+    const { flash } = usePageProps();
     const [showToast, setShowToast] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editing, setEditing] = useState<Calendar | null>(null);
@@ -109,21 +108,7 @@ export default function CalendarsIndex({
     }
 
     return (
-        <AuthenticatedLayout
-            header={
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                        {group.name} — Calendars
-                    </h2>
-                    <Link
-                        href={route('groups.show', group.id)}
-                        className="text-sm font-medium text-gray-500 hover:text-gray-800"
-                    >
-                        Back to group
-                    </Link>
-                </div>
-            }
-        >
+        <>
             <Head title={`${group.name} - Calendars`} />
 
             {showToast && (
@@ -342,6 +327,30 @@ export default function CalendarsIndex({
                     </DialogPanel>
                 </div>
             </Dialog>
-        </AuthenticatedLayout>
+        </>
     );
 }
+
+function CalendarsHeading() {
+    const { group } = usePageProps<{ group: Group }>();
+
+    return (
+        <div className="flex items-center justify-between">
+            <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                {group.name} — Calendars
+            </h2>
+            <Link
+                href={route('groups.show', group.id)}
+                className="text-sm font-medium text-gray-500 hover:text-gray-800"
+            >
+                Back to group
+            </Link>
+        </div>
+    );
+}
+
+CalendarsIndex.layout = (page: ReactNode) => (
+    <AuthenticatedLayout header={<CalendarsHeading />}>
+        {page}
+    </AuthenticatedLayout>
+);

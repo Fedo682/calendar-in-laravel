@@ -1,5 +1,6 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 
 interface Group {
     id: number;
@@ -20,13 +21,7 @@ interface Props {
 
 export default function CalendarsOverview({ calendars }: Props) {
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                    Calendars
-                </h2>
-            }
-        >
+        <>
             <Head title="Calendars" />
 
             <div className="py-8">
@@ -90,6 +85,18 @@ export default function CalendarsOverview({ calendars }: Props) {
                     )}
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </>
     );
 }
+
+CalendarsOverview.layout = (page: ReactNode) => (
+    <AuthenticatedLayout
+        header={
+            <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                Calendars
+            </h2>
+        }
+    >
+        {page}
+    </AuthenticatedLayout>
+);

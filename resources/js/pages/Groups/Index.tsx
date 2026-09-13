@@ -1,11 +1,11 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage } from '@inertiajs/react';
+import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import type { GroupSummary } from '@/types/calendar';
+import { usePageProps } from '@/types/shared';
+import { Head, Link } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
-interface Group {
-    id: number;
-    name: string;
-    description: string | null;
+interface Group extends GroupSummary {
     created_at: string;
     members_count?: number;
 }
@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function GroupsIndex({ groups }: Props) {
-    const { flash, auth } = usePage().props as any;
+    const { flash, auth } = usePageProps();
     const isSuperAdmin = Boolean(auth?.is_super_admin);
     const [showToast, setShowToast] = useState(false);
 
@@ -28,13 +28,7 @@ export default function GroupsIndex({ groups }: Props) {
     }, [flash]);
 
     return (
-        <AuthenticatedLayout
-            header={
-                <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                    {isSuperAdmin ? 'All Groups' : 'My Groups'}
-                </h2>
-            }
-        >
+        <>
             <Head title={isSuperAdmin ? 'All Groups' : 'My Groups'} />
 
             {showToast && (
@@ -109,6 +103,20 @@ export default function GroupsIndex({ groups }: Props) {
                     )}
                 </div>
             </div>
-        </AuthenticatedLayout>
+        </>
     );
 }
+
+function GroupsHeading() {
+    const { auth } = usePageProps();
+
+    return (
+        <h2 className="text-xl leading-tight font-semibold text-gray-800">
+            {auth?.is_super_admin ? 'All Groups' : 'My Groups'}
+        </h2>
+    );
+}
+
+GroupsIndex.layout = (page: ReactNode) => (
+    <AuthenticatedLayout header={<GroupsHeading />}>{page}</AuthenticatedLayout>
+);
