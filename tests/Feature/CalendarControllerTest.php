@@ -2,23 +2,14 @@
 
 use App\Models\Calendar;
 use App\Models\Group;
-use App\Models\GroupUser;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
-function attachCalendarTestRole(Group $group, User $user, string $role): void
-{
-    GroupUser::updateOrCreate(
-        ['group_id' => $group->id, 'user_id' => $user->id],
-        ['role_id' => Role::firstOrCreate(['name' => $role])->id],
-    );
-}
-
 test('group admin can view the calendars index', function () {
     $group = Group::factory()->create();
     $admin = User::factory()->create();
-    attachCalendarTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
 
     $this->actingAs($admin)
         ->get("/groups/{$group->id}/calendars")
@@ -28,7 +19,7 @@ test('group admin can view the calendars index', function () {
 test('group member can view the calendars index', function () {
     $group = Group::factory()->create();
     $member = User::factory()->create();
-    attachCalendarTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
 
     $this->actingAs($member)
         ->get("/groups/{$group->id}/calendars")
@@ -47,7 +38,7 @@ test('non-member is forbidden from viewing the calendars index', function () {
 test('group admin can create a calendar', function () {
     $group = Group::factory()->create();
     $admin = User::factory()->create();
-    attachCalendarTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
 
     $response = $this->actingAs($admin)->post("/groups/{$group->id}/calendars", [
         'name' => 'Engineering',
@@ -67,7 +58,7 @@ test('group admin can create a calendar', function () {
 test('group member cannot create a calendar', function () {
     $group = Group::factory()->create();
     $member = User::factory()->create();
-    attachCalendarTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
 
     $response = $this->actingAs($member)->post("/groups/{$group->id}/calendars", [
         'name' => 'Engineering',
@@ -80,7 +71,7 @@ test('group member cannot create a calendar', function () {
 test('group admin can update a calendar', function () {
     $group = Group::factory()->create();
     $admin = User::factory()->create();
-    attachCalendarTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
 
     $response = $this->actingAs($admin)->put("/groups/{$group->id}/calendars/{$calendar->id}", [
@@ -96,7 +87,7 @@ test('group admin can update a calendar', function () {
 test('group member cannot update a calendar', function () {
     $group = Group::factory()->create();
     $member = User::factory()->create();
-    attachCalendarTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
     $calendar = Calendar::factory()->create(['group_id' => $group->id, 'name' => 'Original']);
 
     $response = $this->actingAs($member)->put("/groups/{$group->id}/calendars/{$calendar->id}", [
@@ -110,7 +101,7 @@ test('group member cannot update a calendar', function () {
 test('group admin can delete a calendar', function () {
     $group = Group::factory()->create();
     $admin = User::factory()->create();
-    attachCalendarTestRole($group, $admin, 'admin');
+    asGroupRole($group, $admin, 'admin');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
 
     $response = $this->actingAs($admin)->delete("/groups/{$group->id}/calendars/{$calendar->id}");
@@ -122,7 +113,7 @@ test('group admin can delete a calendar', function () {
 test('group member cannot delete a calendar', function () {
     $group = Group::factory()->create();
     $member = User::factory()->create();
-    attachCalendarTestRole($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
 
     $response = $this->actingAs($member)->delete("/groups/{$group->id}/calendars/{$calendar->id}");
@@ -135,8 +126,8 @@ test('a calendar from another group 404s via implicit scope binding', function (
     $groupA = Group::factory()->create();
     $groupB = Group::factory()->create();
     $admin = User::factory()->create();
-    attachCalendarTestRole($groupA, $admin, 'admin');
-    attachCalendarTestRole($groupB, $admin, 'admin');
+    asGroupRole($groupA, $admin, 'admin');
+    asGroupRole($groupB, $admin, 'admin');
     $calendarInB = Calendar::factory()->create(['group_id' => $groupB->id]);
 
     $this->actingAs($admin)

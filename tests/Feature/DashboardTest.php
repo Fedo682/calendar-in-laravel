@@ -3,23 +3,14 @@
 use App\Models\Calendar;
 use App\Models\Event;
 use App\Models\Group;
-use App\Models\GroupUser;
 use App\Models\Role;
 use App\Models\User;
-
-function attachDashboardTestRole(Group $group, User $user, string $role): void
-{
-    GroupUser::updateOrCreate(
-        ['group_id' => $group->id, 'user_id' => $user->id],
-        ['role_id' => Role::firstOrCreate(['name' => $role])->id],
-    );
-}
 
 test('dashboard only shows events from calendars the user can see', function () {
     $myGroup = Group::factory()->create();
     $otherGroup = Group::factory()->create();
     $user = User::factory()->create();
-    attachDashboardTestRole($myGroup, $user, 'member');
+    asGroupRole($myGroup, $user, 'member');
 
     $myCalendar = Calendar::factory()->create(['group_id' => $myGroup->id]);
     $otherCalendar = Calendar::factory()->create(['group_id' => $otherGroup->id]);
@@ -74,7 +65,7 @@ test('super admin sees events across every group', function () {
 test('overlapping events across different calendars are flagged as conflicts', function () {
     $group = Group::factory()->create();
     $user = User::factory()->create();
-    attachDashboardTestRole($group, $user, 'member');
+    asGroupRole($group, $user, 'member');
 
     // Two calendars in the same group the user can see.
     $calendarA = Calendar::factory()->create(['group_id' => $group->id]);
@@ -107,7 +98,7 @@ test('overlapping events across different calendars are flagged as conflicts', f
 test('non-overlapping events are not flagged', function () {
     $group = Group::factory()->create();
     $user = User::factory()->create();
-    attachDashboardTestRole($group, $user, 'member');
+    asGroupRole($group, $user, 'member');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
 
     $start = now()->addDay()->setTime(9, 0);
@@ -134,7 +125,7 @@ test('non-overlapping events are not flagged', function () {
 test('events outside the upcoming window are excluded', function () {
     $group = Group::factory()->create();
     $user = User::factory()->create();
-    attachDashboardTestRole($group, $user, 'member');
+    asGroupRole($group, $user, 'member');
     $calendar = Calendar::factory()->create(['group_id' => $group->id]);
 
     Event::factory()->create([

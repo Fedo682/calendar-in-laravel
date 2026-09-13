@@ -5,32 +5,8 @@ use App\Models\GroupUser;
 use App\Models\Role;
 use App\Models\User;
 
-function makeRoles(): void
-{
-    foreach (['super_admin', 'admin', 'member'] as $role) {
-        Role::firstOrCreate(['name' => $role]);
-    }
-}
-
-function makeSuperAdmin(): User
-{
-    makeRoles();
-    $user = User::factory()->create();
-    $user->roles()->attach(Role::where('name', 'super_admin')->value('id'));
-
-    return $user;
-}
-
-function addMember(Group $group, User $user, string $role): void
-{
-    GroupUser::updateOrCreate(
-        ['group_id' => $group->id, 'user_id' => $user->id],
-        ['role_id' => Role::where('name', $role)->value('id')],
-    );
-}
-
 test('non super admin cannot create a group', function () {
-    makeRoles();
+    seedRoles();
     $user = User::factory()->create();
 
     $response = $this->actingAs($user)->get('/groups/create');
@@ -46,7 +22,7 @@ test('non super admin cannot create a group', function () {
 });
 
 test('super admin can create a group', function () {
-    $admin = makeSuperAdmin();
+    $admin = asSuperAdmin();
 
     $response = $this->actingAs($admin)->post('/groups', [
         'name' => 'Acme',
@@ -58,13 +34,13 @@ test('super admin can create a group', function () {
 });
 
 test('index shows all groups for super admin and only member groups for regular users', function () {
-    $admin = makeSuperAdmin();
+    $admin = asSuperAdmin();
     $member = User::factory()->create();
     $stranger = User::factory()->create();
 
     $group1 = Group::create(['name' => 'G1', 'created_by' => $admin->id]);
     $group2 = Group::create(['name' => 'G2', 'created_by' => $admin->id]);
-    addMember($group1, $member, 'member');
+    asGroupRole($group1, $member, 'member');
 
     $adminResponse = $this->actingAs($admin)->get('/groups');
     $adminResponse->assertOk();
@@ -80,12 +56,12 @@ test('index shows all groups for super admin and only member groups for regular 
 });
 
 test('only members of a group (or super admin) can view it', function () {
-    $admin = makeSuperAdmin();
+    $admin = asSuperAdmin();
     $member = User::factory()->create();
     $stranger = User::factory()->create();
 
     $group = Group::create(['name' => 'G1', 'created_by' => $admin->id]);
-    addMember($group, $member, 'member');
+    asGroupRole($group, $member, 'member');
 
     $this->actingAs($member)->get("/groups/{$group->id}")->assertOk();
     $this->actingAs($admin)->get("/groups/{$group->id}")->assertOk();
@@ -93,11 +69,11 @@ test('only members of a group (or super admin) can view it', function () {
 });
 
 test('non super admin cannot update or delete a group', function () {
-    $admin = makeSuperAdmin();
+    $admin = asSuperAdmin();
     $groupAdmin = User::factory()->create();
 
     $group = Group::create(['name' => 'G1', 'created_by' => $admin->id]);
-    addMember($group, $groupAdmin, 'admin');
+    asGroupRole($group, $groupAdmin, 'admin');
 
     $this->actingAs($groupAdmin)
         ->put("/groups/{$group->id}", ['name' => 'New name'])
@@ -115,12 +91,12 @@ test('non super admin cannot update or delete a group', function () {
 });
 
 test('group admin can add and remove members but cannot assign the admin role', function () {
-    $superAdmin = makeSuperAdmin();
+    $superAdmin = asSuperAdmin();
     $groupAdmin = User::factory()->create();
     $newMember = User::factory()->create();
 
     $group = Group::create(['name' => 'G1', 'created_by' => $superAdmin->id]);
-    addMember($group, $groupAdmin, 'admin');
+    asGroupRole($group, $groupAdmin, 'admin');
 
     // Group admin can add a regular member.
     $this->actingAs($groupAdmin)
@@ -150,13 +126,13 @@ test('group admin can add and remove members but cannot assign the admin role', 
 });
 
 test('only super admin can assign the admin role', function () {
-    $superAdmin = makeSuperAdmin();
+    $superAdmin = asSuperAdmin();
     $groupAdmin = User::factory()->create();
     $promotee = User::factory()->create();
 
     $group = Group::create(['name' => 'G1', 'created_by' => $superAdmin->id]);
-    addMember($group, $groupAdmin, 'admin');
-    addMember($group, $promotee, 'member');
+    asGroupRole($group, $groupAdmin, 'admin');
+    asGroupRole($group, $promotee, 'member');
 
     $this->actingAs($superAdmin)
         ->post("/groups/{$group->id}/members", [
@@ -170,12 +146,12 @@ test('only super admin can assign the admin role', function () {
 });
 
 test('a non member cannot manage group membership', function () {
-    $superAdmin = makeSuperAdmin();
+    $superAdmin = asSuperAdmin();
     $stranger = User::factory()->create();
     $target = User::factory()->create();
 
     $group = Group::create(['name' => 'G1', 'created_by' => $superAdmin->id]);
-    addMember($group, $target, 'member');
+    asGroupRole($group, $target, 'member');
 
     $this->actingAs($stranger)
         ->post("/groups/{$group->id}/members", [
@@ -190,12 +166,12 @@ test('a non member cannot manage group membership', function () {
 });
 
 test('membership mutation 404s when the user is not actually a member of the group (IDOR guard)', function () {
-    $superAdmin = makeSuperAdmin();
+    $superAdmin = asSuperAdmin();
     $groupAdmin = User::factory()->create();
     $notAMember = User::factory()->create();
 
     $group = Group::create(['name' => 'G1', 'created_by' => $superAdmin->id]);
-    addMember($group, $groupAdmin, 'admin');
+    asGroupRole($group, $groupAdmin, 'admin');
 
     $this->actingAs($groupAdmin)
         ->delete("/groups/{$group->id}/members/{$notAMember->id}")
