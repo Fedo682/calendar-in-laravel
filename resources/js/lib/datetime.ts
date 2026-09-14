@@ -1,3 +1,4 @@
+import { usePageProps } from '@/types/shared';
 import { TZDate } from '@date-fns/tz';
 import {
     addDays,
@@ -24,6 +25,28 @@ export type DateInput = Date | string | number;
  */
 export function toViewerZone(iso: string, tz: string): TZDate {
     return new TZDate(iso, tz);
+}
+
+/**
+ * The current instant, reinterpreted in the viewer's zone - for "is this
+ * today" and "where does the now-line go" checks, which must not use the
+ * browser's own zone once it can differ from the viewer's chosen one.
+ */
+export function nowInZone(tz: string): TZDate {
+    return new TZDate(Date.now(), tz);
+}
+
+/**
+ * The viewer's IANA timezone, from the props every page already receives.
+ *
+ * Presentational calendar components (`MonthGrid`, `DayView`) take the zone
+ * as a prop instead of calling this themselves, so they stay testable
+ * without an Inertia page context - this is what the page components call.
+ */
+export function useViewerZone(): string {
+    const { viewer } = usePageProps();
+
+    return viewer.timezone;
 }
 
 function asDate(value: DateInput, tz?: string): Date {

@@ -2,6 +2,8 @@ import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialo
 import type { Occurrence, Visibility } from '@/types/calendar';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
+import { toViewerZone } from '@/lib/datetime';
+import { addHours, set } from 'date-fns';
 
 /**
  * The fields every event create/edit dialog collects, across all three pages
@@ -55,7 +57,10 @@ export function toLocalInputValue(date: Date): string {
  * is only the part that was identical across all three: how a click becomes
  * form data.
  */
-export function useEventForm(defaults?: Partial<EventFormData>): {
+export function useEventForm(
+    timezone: string,
+    defaults?: Partial<EventFormData>,
+): {
     form: InertiaFormProps<EventFormData>;
     openCreate: (date: Date, visibility?: Visibility) => void;
     openEdit: (occurrence: Occurrence) => void;
@@ -64,17 +69,25 @@ export function useEventForm(defaults?: Partial<EventFormData>): {
     const form = useForm<EventFormData>({ ...BLANK, ...defaults });
 
     const openCreate = (date: Date, visibility: Visibility = 'public') => {
-        const start = new Date(date);
-
+        // `date` may be a plain Date or a viewer-zone-aware TZDate (from the
+        // month grid or day view); set()/addHours() are type-preserving, so
+        // whichever it is stays that way rather than reverting to whatever
+        // zone a plain `new Date(date)` copy would have read back in.
+        //
         // From the month grid, `date` has no time component (midnight) -
         // default that to a sensible working hour. From a DayView slot
         // click, `date` already carries the clicked hour - keep it as is.
-        if (start.getHours() === 0 && start.getMinutes() === 0) {
-            start.setHours(9, 0, 0, 0);
-        }
+        const start =
+            date.getHours() === 0 && date.getMinutes() === 0
+                ? set(date, {
+                      hours: 9,
+                      minutes: 0,
+                      seconds: 0,
+                      milliseconds: 0,
+                  })
+                : date;
 
-        const end = new Date(start);
-        end.setHours(start.getHours() + 1);
+        const end = addHours(start, 1);
 
         form.setData({
             ...BLANK,
@@ -89,8 +102,12 @@ export function useEventForm(defaults?: Partial<EventFormData>): {
             title: occurrence.title,
             description: occurrence.description ?? '',
             location: occurrence.location ?? '',
-            starts_at: toLocalInputValue(new Date(occurrence.starts_at)),
-            ends_at: toLocalInputValue(new Date(occurrence.ends_at)),
+            starts_at: toLocalInputValue(
+                toViewerZone(occurrence.starts_at, timezone),
+            ),
+            ends_at: toLocalInputValue(
+                toViewerZone(occurrence.ends_at, timezone),
+            ),
             all_day: occurrence.all_day,
             visibility: occurrence.visibility,
             recurrence_rule: occurrence.recurrence_rule ?? '',

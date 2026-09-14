@@ -6,9 +6,12 @@ import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
 import { useEventForm } from '@/components/Calendar/useEventForm';
 import { Badge, Button, Card, EmptyState } from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import { nowInZone, toViewerZone, useViewerZone } from '@/lib/datetime';
 import type { GridEvent, Occurrence, WritableCalendar } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
 import { Head, router } from '@inertiajs/react';
+import { TZDate } from '@date-fns/tz';
+import { addDays, isSameDay } from 'date-fns';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
@@ -39,18 +42,12 @@ interface DashboardProps {
     team_busy: TeamBusyGroup[];
 }
 
-function formatDayHeading(date: Date): string {
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(today.getDate() + 1);
+function formatDayHeading(date: Date, tz: string): string {
+    const today = nowInZone(tz);
+    const tomorrow = addDays(today, 1);
 
-    const sameDay = (a: Date, b: Date) =>
-        a.getFullYear() === b.getFullYear() &&
-        a.getMonth() === b.getMonth() &&
-        a.getDate() === b.getDate();
-
-    if (sameDay(date, today)) return 'Today';
-    if (sameDay(date, tomorrow)) return 'Tomorrow';
+    if (isSameDay(date, today)) return 'Today';
+    if (isSameDay(date, tomorrow)) return 'Tomorrow';
 
     return date.toLocaleDateString(undefined, {
         weekday: 'long',
@@ -59,7 +56,7 @@ function formatDayHeading(date: Date): string {
     });
 }
 
-function formatTimeRange(event: Occurrence): string {
+function formatTimeRange(event: Occurrence, tz: string): string {
     if (event.all_day) return 'All day';
 
     const opts: Intl.DateTimeFormatOptions = {
@@ -67,20 +64,24 @@ function formatTimeRange(event: Occurrence): string {
         minute: '2-digit',
     };
 
-    return `${new Date(event.starts_at).toLocaleTimeString(undefined, opts)} - ${new Date(
+    return `${toViewerZone(event.starts_at, tz).toLocaleTimeString(undefined, opts)} - ${toViewerZone(
         event.ends_at,
+        tz,
     ).toLocaleTimeString(undefined, opts)}`;
 }
 
 /** Group the agenda by day, preserving the server's ordering. */
-function groupByDay(events: UpcomingEvent[]): Array<{
+function groupByDay(
+    events: UpcomingEvent[],
+    tz: string,
+): Array<{
     date: Date;
     events: UpcomingEvent[];
 }> {
     const groups = new Map<string, { date: Date; events: UpcomingEvent[] }>();
 
     for (const event of events) {
-        const date = new Date(event.starts_at);
+        const date = toViewerZone(event.starts_at, tz);
         const key = date.toDateString();
         let group = groups.get(key);
 
@@ -116,9 +117,17 @@ export default function Dashboard() {
         window_days: windowDays,
         writable_calendars: writableCalendars,
         team_busy: teamBusy,
+        viewer,
     } = usePageProps<DashboardProps>();
 
-    const monthDate = new Date(`${month}T00:00:00`);
+    const timezone = useViewerZone();
+    const weekStartsOn = viewer.week_starts_on;
+    // `month` is a bare "YYYY-MM-DD" calendar date, not an instant - built
+    // from its own components so the numbers are interpreted as wall-clock
+    // in the viewer's zone, rather than parsed as a naive string (which
+    // would fall back to whatever zone the browser happens to be in).
+    const [monthYear, monthNum, monthDay] = month.split('-').map(Number);
+    const monthDate = new TZDate(monthYear, monthNum - 1, monthDay, timezone);
     const conflictCount = upcoming.filter(
         (e) => e.conflicts_with.length > 0,
     ).length;
@@ -143,14 +152,15 @@ export default function Dashboard() {
         openCreate: startCreate,
         openEdit: startEdit,
         reset,
-    } = useEventForm();
+    } = useEventForm(timezone);
 
     /** Navigate the grid a whole month at a time. */
     const shiftMonth = (delta: number) => {
-        const next = new Date(
+        const next = new TZDate(
             monthDate.getFullYear(),
             monthDate.getMonth() + delta,
             1,
+            timezone,
         );
         const value = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
 
@@ -285,7 +295,7 @@ export default function Dashboard() {
         );
     };
 
-    const days = groupByDay(upcoming);
+    const days = groupByDay(upcoming, timezone);
 
     return (
         <>
@@ -327,7 +337,9 @@ export default function Dashboard() {
                             {writableCalendars.length > 0 && (
                                 <Button
                                     icon={Plus}
-                                    onClick={() => openCreate(new Date())}
+                                    onClick={() =>
+                                        openCreate(nowInZone(timezone))
+                                    }
                                 >
                                     New event
                                 </Button>
@@ -337,6 +349,8 @@ export default function Dashboard() {
                         <MonthGrid
                             month={monthDate}
                             events={occurrences}
+                            timezone={timezone}
+                            weekStartsOn={weekStartsOn}
                             onDayClick={openCreate}
                             onEventClick={openEdit}
                         />
@@ -393,7 +407,10 @@ export default function Dashboard() {
                                             className="px-4 py-3"
                                         >
                                             <h4 className="text-content-tertiary text-caption1 mb-2 font-semibold uppercase">
-                                                {formatDayHeading(date)}
+                                                {formatDayHeading(
+                                                    date,
+                                                    timezone,
+                                                )}
                                             </h4>
                                             <ul className="space-y-2">
                                                 {events.map((event) => (
@@ -426,6 +443,7 @@ export default function Dashboard() {
                                                                 <p className="text-content-tertiary text-caption1 truncate">
                                                                     {formatTimeRange(
                                                                         event,
+                                                                        timezone,
                                                                     )}
                                                                     {' · '}
                                                                     {event.group_name ??
@@ -580,6 +598,7 @@ export default function Dashboard() {
                                                                         <p className="text-content-tertiary text-caption1">
                                                                             {formatTimeRange(
                                                                                 occurrence,
+                                                                                timezone,
                                                                             )}
                                                                         </p>
                                                                     </li>
