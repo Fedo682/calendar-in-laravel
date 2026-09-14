@@ -1,5 +1,6 @@
 import DayView from '@/components/Calendar/DayView';
 import EventDialog from '@/components/Calendar/EventDialog';
+import { Button, Card } from '@/components/ui';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
@@ -7,6 +8,7 @@ import { useEventForm } from '@/components/Calendar/useEventForm';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { CalendarEvent, Occurrence } from '@/types/calendar';
 import { Head } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -145,71 +147,73 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
         <>
             <Head title={calendar.name} />
 
-            <div className="py-8">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                    <div className="mb-4 rounded-lg border border-gray-200 bg-white px-6 py-4 shadow-sm">
-                        <p className="text-sm text-gray-600">
-                            Everything here is yours. Events default to private,
-                            so other people see only that you are busy, never
-                            the title, description or location.
-                        </p>
-                    </div>
+            <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+                <Card material="thin" className="mb-4">
+                    <p className="text-content-secondary text-footnote">
+                        Everything here is yours. Events default to private, so
+                        other people see only that you are busy, never the
+                        title, description or location.
+                    </p>
+                </Card>
 
-                    <div className="mb-4 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => shiftMonth(-1)}
-                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                Previous
-                            </button>
-                            <button
-                                onClick={() => setMonth(new Date())}
-                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                Today
-                            </button>
-                            <button
-                                onClick={() => shiftMonth(1)}
-                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                Next
-                            </button>
-                            <span className="ml-2 text-sm font-semibold text-gray-900">
-                                {month.toLocaleDateString(undefined, {
-                                    month: 'long',
-                                    year: 'numeric',
-                                })}
-                            </span>
-                        </div>
-
-                        <button
-                            onClick={() => openCreateDialog(new Date())}
-                            className="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Previous month"
+                            onClick={() => shiftMonth(-1)}
                         >
-                            New Event
-                        </button>
+                            <ChevronLeft className="size-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            onClick={() => setMonth(new Date())}
+                        >
+                            Today
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Next month"
+                            onClick={() => shiftMonth(1)}
+                        >
+                            <ChevronRight className="size-4" />
+                        </Button>
+                        <h3 className="text-title3 text-content ms-2 font-semibold">
+                            {month.toLocaleDateString(undefined, {
+                                month: 'long',
+                                year: 'numeric',
+                            })}
+                        </h3>
                     </div>
 
-                    <MonthGrid
-                        month={month}
-                        events={occurrences}
-                        onDayClick={(date) => setSelectedDay(date)}
-                        onEventClick={openEditDialog}
-                    />
-
-                    {selectedDay && (
-                        <div className="mt-6">
-                            <DayView
-                                date={selectedDay}
-                                events={occurrences}
-                                onClose={() => setSelectedDay(null)}
-                                onSlotClick={openCreateDialog}
-                                onEventClick={openEditDialog}
-                            />
-                        </div>
-                    )}
+                    <Button
+                        icon={Plus}
+                        onClick={() => openCreateDialog(new Date())}
+                    >
+                        New event
+                    </Button>
                 </div>
+
+                <MonthGrid
+                    month={month}
+                    events={occurrences}
+                    onDayClick={(date) => setSelectedDay(date)}
+                    onEventClick={openEditDialog}
+                />
+
+                {selectedDay && (
+                    <div className="mt-6">
+                        <DayView
+                            date={selectedDay}
+                            events={occurrences}
+                            onClose={() => setSelectedDay(null)}
+                            onSlotClick={openCreateDialog}
+                            onEventClick={openEditDialog}
+                        />
+                    </div>
+                )}
             </div>
 
             <EventDialog
@@ -239,9 +243,7 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
 PersonalCalendarPage.layout = (page: ReactNode) => (
     <AuthenticatedLayout
         header={
-            <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                My Calendar
-            </h2>
+            <h2 className="text-headline text-chrome-content">My Calendar</h2>
         }
     >
         {page}
