@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\EventVisibility;
 use App\Models\Calendar;
 use App\Models\Event;
 use App\Models\Group;
@@ -227,7 +228,7 @@ test('team_busy has one entry per administered group for an admin, with the corr
     $teammatePersonal = $teammate->personalCalendar();
     Event::factory()->create([
         'calendar_id' => $teammatePersonal->id,
-        'visibility' => \App\Enums\EventVisibility::Private,
+        'visibility' => EventVisibility::Private,
         'created_by' => $teammate->id,
         'starts_at' => now()->addDay(),
         'ends_at' => now()->addDay()->addHour(),

@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\EventVisibility;
-use App\Models\Calendar;
 use App\Models\Event;
 use App\Models\Group;
 use App\Models\User;

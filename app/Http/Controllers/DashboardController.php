@@ -75,7 +75,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * @return list<array{group_id: int, group_name: string, busy_count: int, occurrences: list<array<string, mixed>>}>
+     * @return array<int, array{group_id: int, group_name: string, busy_count: int, occurrences: array<int, array<string, mixed>>}>
      */
     private function teamBusyPayload(User $user, int $windowDays): array
     {

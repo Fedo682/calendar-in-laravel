@@ -128,9 +128,7 @@ export default function Dashboard() {
     const [messagingEvent, setMessagingEvent] = useState<UpcomingEvent | null>(
         null,
     );
-    const [expandedTeams, setExpandedTeams] = useState<Set<number>>(
-        new Set(),
-    );
+    const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
     const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(
         null,
     );

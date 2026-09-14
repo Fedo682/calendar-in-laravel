@@ -271,6 +271,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->pluck('user_id')
                 ->map(fn ($userId) => $calendarIdByOwner->get($userId))
                 ->filter()
+                ->map(fn ($calendarId) => (int) $calendarId)
                 ->values(),
         ])->values();
     }
