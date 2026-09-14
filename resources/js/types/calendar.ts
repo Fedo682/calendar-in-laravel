@@ -35,6 +35,17 @@ export interface CalendarEvent {
 }
 
 /**
+ * What the month grid and day view actually need.
+ *
+ * `id` is not unique once recurrence exists - one stored row yields many
+ * occurrences sharing it - so anything rendering a list of these must key on
+ * `key`, which Occurrence guarantees is distinct per instance.
+ */
+export interface GridEvent extends CalendarEvent {
+    key: string;
+}
+
+/**
  * One dated instance of an event, already redacted for the current viewer.
  *
  * This is the only event shape the server sends to a page. Where `is_redacted`
@@ -58,6 +69,11 @@ export interface Occurrence extends CalendarEvent {
     is_redacted: boolean;
     can_edit: boolean;
     recurrence_id: string | null;
+    /** The series' rule, or null on a one-off. */
+    recurrence_rule: string | null;
+    /** IANA zone the rule is anchored to; set whenever recurrence_rule is. */
+    recurrence_timezone: string | null;
+    is_recurring: boolean;
     calendar_name: string;
     calendar_color: string | null;
     /** Null for events on a personal calendar. */

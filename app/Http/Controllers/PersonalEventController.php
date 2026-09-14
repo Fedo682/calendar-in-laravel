@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\EditsRecurringEvents;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Models\Event;
+use App\Support\Calendar\RecurrenceEditor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -21,6 +23,15 @@ use Illuminate\Http\Request;
  */
 class PersonalEventController extends Controller
 {
+    use EditsRecurringEvents;
+
+    public function __construct(private readonly RecurrenceEditor $recurrence) {}
+
+    protected function recurrenceEditor(): RecurrenceEditor
+    {
+        return $this->recurrence;
+    }
+
     public function store(StoreEventRequest $request): RedirectResponse
     {
         $calendar = $request->user()->personalCalendar();
@@ -43,7 +54,12 @@ class PersonalEventController extends Controller
         // event: it only grants write on a personal calendar to its owner.
         $this->authorize('update', $event);
 
-        $event->update($request->attributesFor($event->calendar));
+        $this->applyUpdate(
+            $event,
+            $request->attributesFor($event->calendar),
+            $request->scope(),
+            $request->occurrenceStart(),
+        );
 
         return redirect()
             ->route('calendars.personal')
@@ -54,7 +70,7 @@ class PersonalEventController extends Controller
     {
         $this->authorize('delete', $event);
 
-        $event->delete();
+        $this->applyDelete($event, $this->scopeFrom($request), $this->occurrenceStartFrom($request));
 
         return redirect()
             ->route('calendars.personal')

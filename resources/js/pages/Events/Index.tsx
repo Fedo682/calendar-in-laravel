@@ -1,4 +1,7 @@
 import DayView from '@/components/Calendar/DayView';
+import RecurrenceEditor from '@/components/Calendar/RecurrenceEditor';
+import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
+import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { CalendarEvent, Occurrence, Visibility } from '@/types/calendar';
@@ -37,6 +40,12 @@ interface EventFormData {
     ends_at: string;
     all_day: boolean;
     visibility: Visibility;
+    recurrence_rule: string;
+    recurrence_timezone: string;
+    /** Which occurrences a save or delete applies to. */
+    scope: RecurrenceScope;
+    /** Which instance was opened, for the two scoped operations. */
+    occurrence_start: string;
 }
 
 /** Format a Date as the value expected by <input type="datetime-local">. */
@@ -64,6 +73,9 @@ export default function EventsIndex({
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
     const [editingEvent, setEditingEvent] = useState<Occurrence | null>(null);
+    const [scopePrompt, setScopePrompt] = useState<'save' | 'delete' | null>(
+        null,
+    );
 
     const form = useForm<EventFormData>({
         title: '',
@@ -73,6 +85,10 @@ export default function EventsIndex({
         ends_at: '',
         all_day: false,
         visibility: 'public',
+        recurrence_rule: '',
+        recurrence_timezone: '',
+        scope: 'all',
+        occurrence_start: '',
     });
 
     const closeDialog = () => {
@@ -105,6 +121,10 @@ export default function EventsIndex({
             ends_at: toLocalInputValue(end),
             all_day: false,
             visibility: 'public',
+            recurrence_rule: '',
+            recurrence_timezone: '',
+            scope: 'all',
+            occurrence_start: '',
         });
         setEditingEvent(null);
         setDialogMode('create');
@@ -135,25 +155,76 @@ export default function EventsIndex({
             ends_at: toLocalInputValue(new Date(full.ends_at)),
             all_day: full.all_day,
             visibility: full.visibility,
+            recurrence_rule: full.recurrence_rule ?? '',
+            recurrence_timezone: full.recurrence_timezone ?? '',
+            scope: 'all',
+            // The instance the user actually clicked. RECURRENCE-ID if this
+            // occurrence already has an override, otherwise its own start.
+            occurrence_start: full.recurrence_id ?? full.starts_at,
         });
         setEditingEvent(full);
         setDialogMode('edit');
+    };
+
+    /**
+     * Editing or deleting a series has to ask which occurrences it applies
+     * to before it can send anything, so both paths route through the scope
+     * dialog when one is open on a recurring event.
+     */
+    const needsScope =
+        dialogMode === 'edit' && (editingEvent?.is_recurring ?? false);
+
+    const saveWithScope = (scope: RecurrenceScope) => {
+        if (!editingEvent) return;
+
+        // transform() mutates the form rather than returning it, so the scope
+        // is applied and then reset once the request has been sent.
+        form.transform((data) => ({ ...data, scope }));
+
+        form.put(eventUrl(group, calendar, editingEvent.event_id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setScopePrompt(null);
+                closeDialog();
+            },
+            onFinish: () => form.transform((data) => data),
+        });
+    };
+
+    const deleteWithScope = (scope: RecurrenceScope) => {
+        if (!editingEvent) return;
+
+        form.transform((data) => ({ ...data, scope }));
+
+        form.delete(eventUrl(group, calendar, editingEvent.event_id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setScopePrompt(null);
+                closeDialog();
+            },
+            onFinish: () => form.transform((data) => data),
+        });
     };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
 
         if (dialogMode === 'edit' && editingEvent) {
-            form.put(eventUrl(group, calendar, editingEvent.id), {
-                preserveScroll: true,
-                onSuccess: () => closeDialog(),
-            });
-        } else {
-            form.post(eventsIndexUrl(group, calendar), {
-                preserveScroll: true,
-                onSuccess: () => closeDialog(),
-            });
+            if (needsScope) {
+                setScopePrompt('save');
+
+                return;
+            }
+
+            saveWithScope('all');
+
+            return;
         }
+
+        form.post(eventsIndexUrl(group, calendar), {
+            preserveScroll: true,
+            onSuccess: () => closeDialog(),
+        });
     };
 
     const destroy = () => {
@@ -161,14 +232,17 @@ export default function EventsIndex({
             return;
         }
 
+        if (needsScope) {
+            setScopePrompt('delete');
+
+            return;
+        }
+
         if (!window.confirm('Delete this event? This cannot be undone.')) {
             return;
         }
 
-        form.delete(eventUrl(group, calendar, editingEvent.id), {
-            preserveScroll: true,
-            onSuccess: () => closeDialog(),
-        });
+        deleteWithScope('all');
     };
 
     const goToPrevMonth = () =>
@@ -394,6 +468,20 @@ export default function EventsIndex({
                                 </div>
                             </div>
 
+                            <RecurrenceEditor
+                                value={form.data.recurrence_rule}
+                                onChange={(rule) =>
+                                    form.setData('recurrence_rule', rule)
+                                }
+                                startsAt={form.data.starts_at}
+                                timezone={form.data.recurrence_timezone}
+                                onTimezoneChange={(tz) =>
+                                    form.setData('recurrence_timezone', tz)
+                                }
+                                error={form.errors.recurrence_rule}
+                                timezoneError={form.errors.recurrence_timezone}
+                            />
+
                             <div>
                                 <label
                                     htmlFor="visibility"
@@ -467,6 +555,18 @@ export default function EventsIndex({
                     </DialogPanel>
                 </div>
             </Dialog>
+
+            <RecurrenceScopeDialog
+                open={scopePrompt !== null}
+                action={scopePrompt ?? 'save'}
+                processing={form.processing}
+                onCancel={() => setScopePrompt(null)}
+                onConfirm={(scope) =>
+                    scopePrompt === 'delete'
+                        ? deleteWithScope(scope)
+                        : saveWithScope(scope)
+                }
+            />
         </>
     );
 }

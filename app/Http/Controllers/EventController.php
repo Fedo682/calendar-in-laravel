@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RoleName;
+use App\Http\Controllers\Concerns\EditsRecurringEvents;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
 use App\Mail\ConflictReportedMail;
@@ -15,6 +16,7 @@ use App\Models\User;
 use App\Support\Calendar\ConflictDetector;
 use App\Support\Calendar\Occurrence;
 use App\Support\Calendar\OccurrenceQuery;
+use App\Support\Calendar\RecurrenceEditor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -25,12 +27,15 @@ use Inertia\Response;
 
 class EventController extends Controller
 {
+    use EditsRecurringEvents;
+
     /** How much of the calendar to load when the client names no range. */
     private const DEFAULT_WINDOW_DAYS = 45;
 
     public function __construct(
         private readonly OccurrenceQuery $occurrences,
         private readonly ConflictDetector $conflicts,
+        private readonly RecurrenceEditor $recurrence,
     ) {}
 
     /**
@@ -84,18 +89,18 @@ class EventController extends Controller
     {
         $this->authorize('update', $event);
 
-        $event->update($request->attributesFor($calendar));
+        $this->applyUpdate($event, $request->attributesFor($calendar), $request->scope(), $request->occurrenceStart());
 
         return redirect()
             ->route('groups.calendars.events.index', [$group, $calendar])
             ->with('success', 'Event updated successfully.');
     }
 
-    public function destroy(Group $group, Calendar $calendar, Event $event): RedirectResponse
+    public function destroy(Request $request, Group $group, Calendar $calendar, Event $event): RedirectResponse
     {
         $this->authorize('delete', $event);
 
-        $event->delete();
+        $this->applyDelete($event, $this->scopeFrom($request), $this->occurrenceStartFrom($request));
 
         return redirect()
             ->route('groups.calendars.events.index', [$group, $calendar])
@@ -117,8 +122,16 @@ class EventController extends Controller
 
         $user = $request->user();
 
-        $subject = $this->occurrences->forEvent($event, $user);
+        // "Report a conflict on event X" stops being a well-formed request
+        // once X repeats - a weekly standup clashes with something on one
+        // Tuesday and with nothing on the next - so the caller names the
+        // instance. Absent for a one-off, where there is only one answer.
+        $subject = $this->occurrences->forEvent($event, $user, $this->occurrenceStartFrom($request));
 
+        // Null here covers both "you cannot see this" and "that instance is
+        // not part of this series", which is deliberate: distinguishing them
+        // would tell an outsider which timestamps a calendar they cannot read
+        // happens to contain.
         if ($subject === null) {
             abort(404);
         }
@@ -142,6 +155,11 @@ class EventController extends Controller
         return back()->with('success', 'Conflict reported to the group admin(s).');
     }
 
+    protected function recurrenceEditor(): RecurrenceEditor
+    {
+        return $this->recurrence;
+    }
+
     /**
      * The range to load, from ?from= and ?to=, falling back to a window
      * around today. Bounded either way - the calendar's whole history is
@@ -156,6 +174,17 @@ class EventController extends Controller
 
         if ($to->lessThanOrEqualTo($from)) {
             $to = $from->copy()->addDays(self::DEFAULT_WINDOW_DAYS);
+        }
+
+        // The range arrives in a query string a user can edit, and expansion
+        // refuses a window wider than this rather than expand an open-ended
+        // series across it. Clamping here keeps that refusal from surfacing
+        // as a 500 on a URL somebody typed, matching how a malformed date in
+        // the same query string is already handled.
+        $maxDays = (int) config('calendar.recurrence.max_window_days');
+
+        if ($from->copy()->addDays($maxDays)->lessThan($to)) {
+            $to = $from->copy()->addDays($maxDays);
         }
 
         return [$from, $to];
