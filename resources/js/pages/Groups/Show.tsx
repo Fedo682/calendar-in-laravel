@@ -426,7 +426,7 @@ export default function GroupsShow({
 }
 
 function GroupHeading() {
-    const { group } = usePageProps<{ group: GroupProp }>();
+    const { group, can_manage } = usePageProps<Props>();
 
     return (
         <div className="flex items-center justify-between gap-4">
@@ -434,12 +434,22 @@ function GroupHeading() {
                 <Users className="size-4 opacity-70" />
                 {group.name}
             </h2>
-            <Link
-                href={route('groups.index')}
-                className="text-chrome-content/70 hover:text-chrome-content text-footnote font-medium"
-            >
-                Back to groups
-            </Link>
+            <div className="flex items-center gap-4">
+                {can_manage && (
+                    <Link
+                        href={`/groups/${group.id}/messages`}
+                        className="text-chrome-content/70 hover:text-chrome-content text-footnote font-medium"
+                    >
+                        Messages
+                    </Link>
+                )}
+                <Link
+                    href={route('groups.index')}
+                    className="text-chrome-content/70 hover:text-chrome-content text-footnote font-medium"
+                >
+                    Back to groups
+                </Link>
+            </div>
         </div>
     );
 }
