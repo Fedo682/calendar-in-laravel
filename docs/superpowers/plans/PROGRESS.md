@@ -11,82 +11,94 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next:** Task 7 of the paper UI conversion — the landing page (convert
-> `resources/js/pages/welcome.tsx`, add a `tests/Feature/WelcomeTest.php`
-> regression guard since none exists).
+> **The paper UI conversion plan is fully done - all 9 tasks complete, the
+> legacy bridge and pre-design-system primitives deleted.** This was the
+> last plan queued up; there is no automatic next task. See "Still to come"
+> below for what's next (ICS feed is now unblocked - Task 8 landed).
 >
-> Team busy-visibility, conflict scoping, the team-busy panel, and
-> member-to-admin messaging (spec: `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`,
-> plan: `docs/superpowers/plans/2026-09-14-team-busy-visibility-and-messaging.md`,
-> all 9 tasks done) **merged to `dev` via PR #11**, bringing Task 6 of the
-> paper UI conversion along with it (that PR was stacked on
-> `phase/6-ui-conversion`, which had never been merged on its own). Both
-> feature branches are deleted, locally and on origin.
+> Branch: `phase/7-landing-page` (name is stale - it ended up carrying
+> Tasks 7, 8 and 9). Not yet merged or PR'd. All four gates green
+> (312 tests, pint, phpstan clean, build succeeds).
 >
-> **One known gap, found while wiring the frontend:** the "Message" button's
-> `messagedIds` is local React state, so a "Messaged" row reverts to
-> "Message" on page reload even though the server-side dedup still silently
-> blocks a second send (it just redirects with a flash error instead of
-> visibly failing). A future pass could have the server tell the client
-> which occurrences this viewer has already messaged, so the button state
-> survives a reload. Not blocking - the dedup is enforced either way - but
-> worth fixing before this feels finished.
+> **Task 8 turned out to need more than its own file list said.** Its
+> plan only listed `lib/datetime.ts`, `MonthGrid.tsx`, `DayView.tsx`,
+> `Dashboard.tsx` - but `MonthGrid`/`DayView` now hand back viewer-zone-aware
+> `TZDate` instances through their click callbacks, and `useEventForm.ts`
+> was re-wrapping those in a plain `new Date(...)` before use, which would
+> have silently discarded the zone. Fixed `useEventForm`, and while there,
+> found and fixed a deeper pre-existing bug: create/edit submissions sent a
+> bare "2026-09-20T09:00" string the backend parsed in the app's own UTC
+> timezone rather than the viewer's, so two people creating an event at
+> "9am" in different zones both landed on 9am UTC. Both are fixed now
+> (`localInputValueToUtcIso()` / `withUtcOffsets()` in `lib/datetime.ts` /
+> `useEventForm.ts`), verified against Carbon directly (see that commit),
+> but not yet clicked through in an actual browser.
 >
-> **One manual browser check outstanding for this feature, not performed** -
-> no browser automation is available in this session: click "Message" on an
-> agenda row for a group event you can't edit, send a message, confirm the
-> dialog closes and the button reads "Messaged". Covered at the HTTP level
-> by `tests/Feature/EventMessageTest.php`, not yet clicked through by hand.
+> **Task 9's own grep for bridged classes only checked `pages/`and
+> `layouts/`, missing `RecurrenceEditor.tsx` and `RecurrenceScopeDialog.tsx`**
+> under `components/Calendar/` - both still had raw indigo/gray Tailwind
+> classes. Converted both to the design system before deleting the bridge,
+> or they'd have reverted to stock Tailwind colors. Also deleted
+> `NavLink.tsx`, `ResponsiveNavLink.tsx`, `Dropdown.tsx` (the plan's "keep
+> only if imported" list) - none had any remaining imports.
 >
-> **Two manual browser checks from the UI conversion plan are still
-> outstanding, neither performed** - no
-> browser automation is available in this session:
-> 1. Task 5's Step 9: edit one occurrence of a recurring event, choose "This
->    event" in the scope prompt, confirm only that occurrence changed.
-> 2. Task 6's Step 6: month grid, day view and the create dialog on all three
->    pages (Events/Index, Personal, Dashboard), in both appearances - confirm
->    event pills take their calendar's colour and a redacted event reads as a
->    flat "Busy" block.
+> **Manual browser checks outstanding, none performed - no browser
+> automation is available in this session:**
+> 1. Task 5's Step 9: edit one occurrence of a recurring event, choose
+>    "This event" in the scope prompt, confirm only that occurrence changed.
+> 2. Task 6's Step 6: month grid, day view and the create dialog on all
+>    three pages (Events/Index, Personal, Dashboard), in both appearances -
+>    confirm event pills take their calendar's colour and a redacted event
+>    reads as a flat "Busy" block.
+> 3. Task 8's Step 6: set your profile timezone to `Pacific/Auckland`,
+>    create an event, confirm it appears at the hour you typed. Then switch
+>    to `America/Los_Angeles` and confirm the same event moves in the grid
+>    without its stored time changing. This is the one that actually proves
+>    the write-path fix above works outside a `tinker` check.
+> 4. Task 9's Step 6: visual sweep of every page (Dashboard, Events,
+>    Personal, Calendars, Groups, Profile, Login, Welcome, Styleguide) in
+>    both appearances - nothing should look different now that the legacy
+>    bridge is gone. If something does, that page was still leaning on it.
 >
-> Both are covered at the HTTP/component level by existing tests and were
-> verified by static code review, but nobody has clicked through either in an
-> actual browser since these changes landed. Do both by hand before trusting
-> this phase in production.
+> All four are covered at the HTTP/component level by existing tests and
+> were verified by static code review, but nobody has clicked through any
+> of them in a real browser since these changes landed. Do all four by hand
+> before treating this branch as production-ready.
 >
-> **Task 6 also gave Dashboard's dialog recurrence editing and a scope prompt
-> it never had before** - its old hand-rolled fields had no RecurrenceEditor
-> at all, so switching to the shared EventDialog is a real (intentional, but
-> beyond the plan's literal Step 4 wording) capability change: editing a
-> recurring event from the dashboard agenda can now change the whole series,
-> and now asks which occurrences first, matching the other two pages. Flagged
-> here in case that capability change wasn't wanted on the dashboard
-> specifically.
+> **Separately, from the earlier team-busy-visibility/messaging work
+> (merged via PR #11):** the "Message" button's `messagedIds` is local
+> React state, so a "Messaged" row reverts to "Message" on page reload even
+> though the server-side dedup still silently blocks a second send. Not
+> blocking - the dedup is enforced either way - but worth fixing.
+>
+> **Task 6 also gave Dashboard's dialog recurrence editing and a scope
+> prompt it never had before** - its old hand-rolled fields had no
+> RecurrenceEditor at all, so switching to the shared EventDialog is a real
+> (intentional, but beyond that plan's literal wording) capability change:
+> editing a recurring event from the dashboard agenda can now change the
+> whole series, and now asks which occurrences first, matching the other
+> two pages. Flagged in case that capability change wasn't wanted on the
+> dashboard specifically.
 
 ---
 
 ## Plan being executed
 
-`docs/superpowers/plans/2026-09-14-paper-ui-conversion.md`
+`docs/superpowers/plans/2026-09-14-paper-ui-conversion.md` - **complete.**
 
-| #   | Task                                            | State           |
-| --- | ----------------------------------------------- | --------------- |
-| 1   | Auth pages and the guest layout                 | [x] done        |
-| 2   | Profile                                         | [x] done        |
-| 3   | Groups                                          | [x] done        |
-| 4   | Calendar list pages                             | [x] done        |
-| 5   | Extract the shared event dialog                 | [x] done*       |
-| 6   | Calendar page chrome                             | [x] done*       |
-| 7   | The landing page                                | [ ] not started |
-| 8   | Render dates in the viewer's timezone           | [ ] not started |
-| 9   | Delete the legacy bridge and the old primitives | [ ] not started |
+| #   | Task                                            | State     |
+| --- | ------------------------------------------------ | --------- |
+| 1   | Auth pages and the guest layout                 | [x] done  |
+| 2   | Profile                                         | [x] done  |
+| 3   | Groups                                          | [x] done  |
+| 4   | Calendar list pages                             | [x] done  |
+| 5   | Extract the shared event dialog                 | [x] done* |
+| 6   | Calendar page chrome                            | [x] done* |
+| 7   | The landing page                                | [x] done  |
+| 8   | Render dates in the viewer's timezone           | [x] done* |
+| 9   | Delete the legacy bridge and the old primitives | [x] done* |
 
-\* Task 5 and Task 6: manual browser checks (Step 9 and Step 6 respectively) still outstanding - see above.
-
-**Checkpoints already passed:** the pause after Task 4 (before Task 5 rebuilt
-the calendar views), and the pause after Task 6 (both calendar pages and
-Dashboard now share one converted chrome and one dialog) - the user said to
-continue each time. The next natural pause is after Task 9, when the legacy
-bridge is deleted and the conversion is fully done.
+\* Task 5, 6, 8 and 9: manual browser checks still outstanding - see above.
 
 ---
 
@@ -109,12 +121,12 @@ Test count at the last green run: **311 passing**.
 
 ---
 
-## Still to come after this plan
+## Still to come
 
 - **ICS feed** — per-user secret-token URL, `sabre/vobject` with real
-  VTIMEZONE, ETag/304 caching, a "Subscribed devices" revoke list.
-  **Depends on Task 8** of the current plan (viewer timezone), or subscribers
-  see events at the wrong hour.
+  VTIMEZONE, ETag/304 caching, a "Subscribed devices" revoke list. Was
+  blocked on viewer timezone rendering; unblocked once `phase/7-landing-page`
+  (Task 8) merges to `dev`.
 - **Google two-way sync** — six incremental steps, OAuth through to the
   conflict audit UI. Against the REST API via the `Http` facade, because
   neither `google/apiclient` nor `laravel/socialite` supports Guzzle 8.
