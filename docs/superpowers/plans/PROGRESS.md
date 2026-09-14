@@ -24,10 +24,14 @@ so the state ships with the work rather than trailing it.
 > browser since the extraction. Do this by hand before treating Task 5 as
 > fully closed.
 >
-> Branch: `phase/6-ui-conversion`. **Stacked on
-> `feat/paper-theme-and-dashboard`, not on `dev`** — the conversion needs that
-> branch's tokens and its Dashboard reference conversion, and it was still
-> unmerged when this started. Rebase onto `dev` once the paper theme lands.
+> Branch: `phase/6-ui-conversion`, **pushed to origin** (not merged - just
+> backed up, since this session was stopped proactively at 96% context rather
+> than cut off by a rate limit). **Stacked on `feat/paper-theme-and-dashboard`,
+> not on `dev`** — the conversion needs that branch's tokens and its Dashboard
+> reference conversion, and it was still unmerged when this started. Rebase
+> onto `dev` once the paper theme lands - check whether
+> `feat/paper-theme-and-dashboard` has been merged first; if so, rebase this
+> branch onto `dev` directly instead of staying stacked on a now-dead branch.
 
 ---
 
@@ -49,8 +53,10 @@ so the state ships with the work rather than trailing it.
 
 \* Task 5: manual recurrence-flow check (its Step 9) still outstanding - see above.
 
-**Checkpoint:** stop after Task 4 for review before the calendar views are
-rebuilt.
+**Checkpoint already passed:** the pause after Task 4 (before Task 5 rebuilt
+the calendar views) happened and the user said to continue. The next natural
+pause is after Task 6, once both calendar pages and Dashboard share one
+converted chrome.
 
 ---
 
