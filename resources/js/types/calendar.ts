@@ -33,3 +33,33 @@ export interface CalendarEvent {
     ends_at: string;
     all_day: boolean;
 }
+
+/**
+ * One dated instance of an event, already redacted for the current viewer.
+ *
+ * This is the only event shape the server sends to a page. Where `is_redacted`
+ * is true the title is a stand-in and description/location are null, because
+ * the viewer is not entitled to them - there is no second, fuller copy to
+ * reach for.
+ *
+ * `id` satisfies CalendarEvent for the grid components and carries the event
+ * row id; `key` is what React should key on, since one recurring event will
+ * later produce many occurrences sharing that id.
+ */
+export interface Occurrence extends CalendarEvent {
+    key: string;
+    event_id: number;
+    calendar_id: number;
+    /** Null for events on a personal calendar, which belongs to no group. */
+    group_id: number | null;
+    description: string | null;
+    location: string | null;
+    visibility: Visibility;
+    is_redacted: boolean;
+    can_edit: boolean;
+    recurrence_id: string | null;
+    calendar_name: string;
+    calendar_color: string | null;
+    /** Null for events on a personal calendar. */
+    group_name: string | null;
+}

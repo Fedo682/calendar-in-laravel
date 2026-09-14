@@ -1,22 +1,24 @@
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import type { CalendarEvent } from '@/types/calendar';
+import type { Occurrence } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
-/** One row of `DashboardController@index`'s `upcoming_events` payload. */
-interface UpcomingEvent extends CalendarEvent {
-    description: string | null;
-    location: string | null;
-    group_id: number;
-    group_name: string;
-    calendar_id: number;
-    calendar_name: string;
-    calendar_color: string | null;
-    can_manage: boolean;
-    /** Titles of the events this one overlaps, already resolved server-side. */
+/**
+ * One row of `DashboardController@index`'s `upcoming_events` payload.
+ *
+ * Every field is already redacted for the signed-in viewer; where
+ * `is_redacted` is true the title is a stand-in and there is no fuller copy
+ * to fall back on.
+ */
+interface UpcomingEvent extends Occurrence {
+    /**
+     * Titles of the events this one overlaps, resolved server-side from the
+     * same redacted data - so a clash with someone's private appointment
+     * reads as "Busy" rather than naming it.
+     */
     conflicts_with: string[];
 }
 
@@ -121,13 +123,30 @@ export default function Dashboard() {
         ends_at: '',
     });
 
+    /**
+     * Where this event's write routes live.
+     *
+     * Group events are nested under their group; personal-calendar events have
+     * no group_id at all and use the flat routes instead.
+     */
+    function eventUrl(event: UpcomingEvent): string {
+        return event.group_id === null
+            ? `/calendars/personal/events/${event.event_id}`
+            : `/groups/${event.group_id}/calendars/${event.calendar_id}/events/${event.event_id}`;
+    }
+
     function reportConflict(event: UpcomingEvent) {
+        // Reporting a clash notifies the group's admins, so it only applies to
+        // events that belong to a group.
+        if (event.group_id === null) return;
+
         router.post(
-            `/groups/${event.group_id}/calendars/${event.calendar_id}/events/${event.id}/report-conflict`,
+            `/groups/${event.group_id}/calendars/${event.calendar_id}/events/${event.event_id}/report-conflict`,
             {},
             {
                 preserveScroll: true,
-                onSuccess: () => setReportedIds((ids) => [...ids, event.id]),
+                onSuccess: () =>
+                    setReportedIds((ids) => [...ids, event.event_id]),
             },
         );
     }
@@ -155,13 +174,10 @@ export default function Dashboard() {
         e.preventDefault();
         if (!editingEvent) return;
 
-        editForm.put(
-            `/groups/${editingEvent.group_id}/calendars/${editingEvent.calendar_id}/events/${editingEvent.id}`,
-            {
-                preserveScroll: true,
-                onSuccess: () => closeEditTime(),
-            },
-        );
+        editForm.put(eventUrl(editingEvent), {
+            preserveScroll: true,
+            onSuccess: () => closeEditTime(),
+        });
     }
 
     return (
@@ -217,7 +233,7 @@ export default function Dashboard() {
                                         <ul className="space-y-3">
                                             {events.map((event) => (
                                                 <li
-                                                    key={event.id}
+                                                    key={event.key}
                                                     className={`rounded-md border px-4 py-3 ${
                                                         event.conflicts_with
                                                             .length > 0
@@ -251,13 +267,11 @@ export default function Dashboard() {
                                                                 )}
                                                             </div>
                                                             <p className="mt-0.5 truncate text-xs text-gray-500">
-                                                                {
-                                                                    event.group_name
-                                                                }{' '}
-                                                                ·{' '}
-                                                                {
-                                                                    event.calendar_name
-                                                                }
+                                                                {event.group_name
+                                                                    ? `${event.group_name} · ${event.calendar_name}`
+                                                                    : event.calendar_name}
+                                                                {event.is_redacted &&
+                                                                    ' · private'}
                                                             </p>
                                                             {event
                                                                 .conflicts_with
@@ -277,7 +291,8 @@ export default function Dashboard() {
                                                                     event,
                                                                 )}
                                                             </span>
-                                                            {event.can_manage ? (
+                                                            {event.can_edit &&
+                                                            !event.is_redacted ? (
                                                                 <button
                                                                     onClick={() =>
                                                                         openEditTime(
@@ -294,7 +309,7 @@ export default function Dashboard() {
                                                                     .length >
                                                                     0 &&
                                                                 (reportedIds.includes(
-                                                                    event.id,
+                                                                    event.event_id,
                                                                 ) ? (
                                                                     <span className="text-xs font-medium text-gray-400">
                                                                         Reported
