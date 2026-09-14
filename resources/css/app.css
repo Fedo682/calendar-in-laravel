@@ -1,1 +1,533 @@
 @import 'tailwindcss';
+
+/*
+ * Dark is the default, so the variant cannot lean on `prefers-color-scheme`.
+ * A blocking script in app.blade.php stamps `.dark` or `.light` on <html>
+ * before first paint; everything below keys off that one class.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =========================================================================
+ * LAYER 1 - static design constants
+ *
+ * Plain `@theme`, so Tailwind inlines these values straight into the
+ * generated utilities. Nothing here changes between light and dark, so
+ * there is nothing to indirect through a custom property at runtime.
+ * ========================================================================= */
+@theme {
+    /* Bound to the self-hosted family the @fonts directive links in the
+       document head. Apple's own stack follows as the fallback so the first
+       paint - and any client that fails to fetch the webfont - still lands
+       on the system UI face rather than on Times. */
+    --font-sans:
+        'Instrument Sans', ui-sans-serif, system-ui, -apple-system,
+        BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono:
+        ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+    /* ---- Apple HIG type scale -------------------------------------------
+       iOS text styles at their default (Large) dynamic-type size, in rem.
+       Named rather than numbered so a component picks a *role* - headline,
+       footnote - the way a HIG layout does, instead of guessing at text-sm. */
+    --text-caption2: 0.6875rem; /* 11px */
+    --text-caption2--line-height: 1.2727;
+    --text-caption1: 0.75rem; /* 12px */
+    --text-caption1--line-height: 1.3333;
+    --text-footnote: 0.8125rem; /* 13px */
+    --text-footnote--line-height: 1.3846;
+    --text-subhead: 0.9375rem; /* 15px */
+    --text-subhead--line-height: 1.3333;
+    --text-body: 1.0625rem; /* 17px */
+    --text-body--line-height: 1.2941;
+    --text-headline: 1.0625rem; /* 17px, carried at 600 */
+    --text-headline--line-height: 1.2941;
+    --text-headline--font-weight: 600;
+    --text-title3: 1.25rem; /* 20px */
+    --text-title3--line-height: 1.25;
+    --text-title2: 1.375rem; /* 22px */
+    --text-title2--line-height: 1.2727;
+    --text-title1: 1.75rem; /* 28px */
+    --text-title1--line-height: 1.2143;
+    --text-largetitle: 2.125rem; /* 34px */
+    --text-largetitle--line-height: 1.2059;
+    --text-largetitle--letter-spacing: -0.02em;
+
+    /* ---- Continuous-corner radii ----------------------------------------
+       Apple's squircle is a superellipse, which CSS cannot draw. These are
+       the border-radius values that read closest at each control size; the
+       trick is that the radius has to grow with the box, which is why there
+       is a radius per role rather than one global --radius. */
+    --radius-control: 0.5rem; /* small buttons, chips */
+    --radius-field: 0.625rem; /* inputs, selects */
+    --radius-card: 1rem; /* cards, panels */
+    --radius-sheet: 1.25rem; /* modals, popovers, sheets */
+
+    /* ---- Motion ----------------------------------------------------------
+       --ease-hig is the curve UIKit uses for sheet presentation: almost no
+       ease-in, a long ease-out. It is what makes a transition feel native
+       rather than like a generic CSS `ease`. */
+    --ease-hig: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-hig-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-fast: 150ms;
+    --duration-base: 250ms;
+    --duration-slow: 400ms;
+
+    /* ---- Material thicknesses -------------------------------------------
+       The four blur radii behind the material-* utilities, mirroring
+       UIBlurEffect's ultraThin / thin / regular / thick. */
+    --blur-ultrathin: 12px;
+    --blur-thin: 20px;
+    --blur-regular: 30px;
+    --blur-thick: 40px;
+
+    /* ---- Elevation -------------------------------------------------------
+       Glass carries most of the depth, so the shadows stay shallow; their
+       job is to lift a surface off the canvas, not to draw a drop shadow. */
+    --shadow-raised: 0 1px 2px oklch(0 0 0 / 0.16);
+    --shadow-overlay:
+        0 8px 24px oklch(0 0 0 / 0.22), 0 2px 6px oklch(0 0 0 / 0.14);
+    --shadow-modal:
+        0 24px 64px oklch(0 0 0 / 0.34), 0 8px 16px oklch(0 0 0 / 0.18);
+}
+
+/* =========================================================================
+ * LAYER 2 - semantic colours
+ *
+ * `@theme inline` is load-bearing. It makes `bg-surface` compile to
+ * `background-color: var(--surface)` instead of baking today's value in,
+ * which is the only reason the `.light` block further down can repaint the
+ * whole app by redefining a couple of dozen custom properties. Drop the
+ * `inline` and the theme toggle silently stops doing anything.
+ * ========================================================================= */
+@theme inline {
+    --color-canvas: var(--canvas);
+    --color-surface: var(--surface);
+    --color-surface-raised: var(--surface-raised);
+    /* The non-translucent stand-in the material utilities fall back to when
+       backdrop-filter is unavailable or unwanted. */
+    --color-surface-opaque: var(--surface-opaque);
+    --color-hairline: var(--hairline);
+
+    --color-content: var(--content);
+    --color-content-secondary: var(--content-secondary);
+    --color-content-tertiary: var(--content-tertiary);
+    --color-content-inverse: var(--content-inverse);
+
+    --color-accent: var(--accent);
+    --color-accent-hover: var(--accent-hover);
+    --color-accent-soft: var(--accent-soft);
+    --color-on-accent: var(--on-accent);
+
+    --color-danger: var(--danger);
+    --color-danger-soft: var(--danger-soft);
+    --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+
+    /* Fill for an event the viewer may know exists but not read. */
+    --color-busy: var(--busy);
+
+    --color-overlay: var(--overlay);
+}
+
+/* ---- Dark (the default) -------------------------------------------------
+   `:root` and `.dark` share the block so the app is dark even in the split
+   second before the head script runs, and stays dark if that script is
+   blocked outright. */
+:root,
+.dark {
+    color-scheme: dark;
+
+    --canvas: oklch(0.168 0.008 265);
+    /* The frosted-card fill: a few percent of white, which reads as a tint
+       of whatever the blur pulls through from behind it. */
+    --surface: oklch(1 0 0 / 0.055);
+    --surface-raised: oklch(1 0 0 / 0.09);
+    --surface-opaque: oklch(0.225 0.009 265);
+    --hairline: oklch(1 0 0 / 0.12);
+
+    --content: oklch(0.972 0.003 265);
+    --content-secondary: oklch(0.735 0.009 265);
+    --content-tertiary: oklch(0.575 0.011 265);
+    --content-inverse: oklch(0.168 0.008 265);
+
+    /* System Blue, dark appearance (#0A84FF). */
+    --accent: oklch(0.652 0.191 258);
+    --accent-hover: oklch(0.708 0.176 258);
+    --accent-soft: oklch(0.652 0.191 258 / 0.18);
+    --on-accent: oklch(1 0 0);
+
+    --danger: oklch(0.665 0.222 27); /* System Red    #FF453A */
+    --danger-soft: oklch(0.665 0.222 27 / 0.18);
+    --success: oklch(0.78 0.185 148); /* System Green  #30D158 */
+    --success-soft: oklch(0.78 0.185 148 / 0.18);
+    --warning: oklch(0.78 0.166 62); /* System Orange #FF9F0A */
+    --warning-soft: oklch(0.78 0.166 62 / 0.18);
+
+    --busy: oklch(0.52 0.012 265);
+
+    --overlay: oklch(0 0 0 / 0.55);
+}
+
+/* ---- Light --------------------------------------------------------------
+   Not a tint of the dark theme. The materials invert: glass in light mode is
+   mostly-opaque white letting a little colour through, which is how the same
+   blur reads as "frosted" rather than as "dirty". */
+.light {
+    color-scheme: light;
+
+    --canvas: oklch(0.968 0.002 265);
+    --surface: oklch(1 0 0 / 0.72);
+    --surface-raised: oklch(1 0 0 / 0.88);
+    --surface-opaque: oklch(1 0 0);
+    --hairline: oklch(0.21 0.01 265 / 0.13);
+
+    --content: oklch(0.21 0.01 265);
+    --content-secondary: oklch(0.455 0.012 265);
+    --content-tertiary: oklch(0.615 0.011 265);
+    --content-inverse: oklch(1 0 0);
+
+    /* System Blue, light appearance (#007AFF). */
+    --accent: oklch(0.588 0.222 258);
+    --accent-hover: oklch(0.535 0.213 258);
+    --accent-soft: oklch(0.588 0.222 258 / 0.12);
+    --on-accent: oklch(1 0 0);
+
+    --danger: oklch(0.628 0.237 29); /* System Red    #FF3B30 */
+    --danger-soft: oklch(0.628 0.237 29 / 0.1);
+    --success: oklch(0.723 0.192 149); /* System Green  #34C759 */
+    --success-soft: oklch(0.723 0.192 149 / 0.12);
+    --warning: oklch(0.762 0.164 63); /* System Orange #FF9500 */
+    --warning-soft: oklch(0.762 0.164 63 / 0.14);
+
+    --busy: oklch(0.72 0.011 265);
+
+    --overlay: oklch(0.21 0.01 265 / 0.32);
+}
+
+/* =========================================================================
+ * LAYER 3 - materials
+ *
+ * Exactly four thicknesses, mirroring UIBlurEffect. Pick by role:
+ *
+ *   material-ultrathin  chips, event pills, inline badges
+ *   material-thin       cards, panels
+ *   material-regular    sidebar, toolbar - the persistent chrome
+ *   material-thick      modals, sheets, popovers - things over content
+ *
+ * Never nest one inside another of the same thickness: two identical blurs
+ * stacked read as one muddy layer and cost twice as much to composite.
+ *
+ * PERFORMANCE: backdrop-filter makes the compositor snapshot and blur
+ * everything behind the element, per element, per frame. That is fine for
+ * the handful of chrome surfaces on screen at once. It is not fine for the
+ * 42 cells of a month grid or the rows of a list, which take the flat
+ * `surface-flat` utility below instead.
+ * ========================================================================= */
+/*
+ * Declaration order matters here and is not stylistic. Lightning CSS merges a
+ * prefixed/unprefixed pair and keeps the *last* one it sees, so writing the
+ * standard property first silently ships Safari-only glass - Chrome and
+ * Firefox get a flat translucent box. Prefixed first, standard second, which
+ * is also the order Tailwind's own backdrop-blur-* utility emits.
+ */
+@utility material-* {
+    background-color: var(--surface);
+    -webkit-backdrop-filter: blur(--value(--blur-*)) saturate(180%);
+    backdrop-filter: blur(--value(--blur-*)) saturate(180%);
+    border: 1px solid var(--hairline);
+}
+
+/* Tailwind has an --ease-* theme namespace but no --duration-* one, so the
+   three constants above would generate nothing on their own. Spelled out as
+   utilities here rather than left as duration-(--duration-fast) at every call
+   site.
+
+   Both the custom property and the longhand are set: Tailwind's `transition`
+   utility resolves its duration through `--tw-duration`, while a bare
+   `duration-fast` with no `transition` alongside it needs the longhand. */
+@utility duration-fast {
+    --tw-duration: var(--duration-fast);
+    transition-duration: var(--duration-fast);
+}
+
+@utility duration-base {
+    --tw-duration: var(--duration-base);
+    transition-duration: var(--duration-base);
+}
+
+@utility duration-slow {
+    --tw-duration: var(--duration-slow);
+    transition-duration: var(--duration-slow);
+}
+
+/* The non-blurring counterpart, for anything that repeats: grid cells, list
+   rows, table rows. Same fill, none of the compositing cost. */
+@utility surface-flat {
+    background-color: var(--surface-opaque);
+    border: 1px solid var(--hairline);
+}
+
+/* A hairline that follows the theme, for the many places that want one edge
+   rather than a whole box. */
+@utility hairline-t {
+    border-top: 1px solid var(--hairline);
+}
+
+@utility hairline-b {
+    border-bottom: 1px solid var(--hairline);
+}
+
+/* Accent bloom on hover. A utility so the glow is one concept with one
+   definition, rather than a ring/shadow pair copied into every component. */
+@utility glow {
+    box-shadow:
+        0 0 0 1px color-mix(in oklch, var(--accent) 34%, transparent),
+        0 6px 28px -6px color-mix(in oklch, var(--accent) 42%, transparent);
+}
+
+/* The gradient wash behind the whole app. Two very wide, very faint radial
+   accents - enough to keep a large dark field from reading as flat, quiet
+   enough not to compete with content. */
+@utility canvas-wash {
+    background-color: var(--canvas);
+    background-image:
+        radial-gradient(
+            ellipse 80% 55% at 12% -8%,
+            color-mix(in oklch, var(--accent) 16%, transparent),
+            transparent 60%
+        ),
+        radial-gradient(
+            ellipse 70% 50% at 100% 0%,
+            color-mix(in oklch, var(--accent) 9%, transparent),
+            transparent 62%
+        );
+    background-attachment: fixed;
+}
+
+/* =========================================================================
+ * ACCESSIBILITY FALLBACKS
+ *
+ * Glass that does not blur is just a 5%-opacity white box on a dark field:
+ * the border all but vanishes and the text loses its ground. Both branches
+ * below swap every material for its opaque equivalent.
+ * ========================================================================= */
+@supports not
+((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .material-ultrathin,
+    .material-thin,
+    .material-regular,
+    .material-thick {
+        background-color: var(--surface-opaque);
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .material-ultrathin,
+    .material-thin,
+    .material-regular,
+    .material-thick {
+        background-color: var(--surface-opaque);
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    .canvas-wash {
+        background-image: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* =========================================================================
+ * BASE
+ * ========================================================================= */
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        background-color: var(--canvas);
+        color: var(--content);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* One focus treatment for the whole app rather than a per-component
+       focus:ring-*, so a keyboard user sees the same halo everywhere. */
+    :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
+
+    ::selection {
+        background-color: var(--accent-soft);
+        color: var(--content);
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: var(--content-tertiary);
+        border: 3px solid transparent;
+        border-radius: 9999px;
+        background-clip: content-box;
+    }
+
+    /* The native date/time pickers ship a dark glyph that disappears against
+       a dark field. */
+    .dark input[type='date']::-webkit-calendar-picker-indicator,
+    .dark input[type='time']::-webkit-calendar-picker-indicator,
+    .dark input[type='datetime-local']::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 0.55;
+    }
+}
+
+/* =========================================================================
+ * LEGACY BRIDGE - temporary, delete with the last unconverted page
+ *
+ * The ~20 pages predating this phase hard-code Tailwind's default palette
+ * (bg-white, text-gray-700, border-gray-300). Converting them is a later
+ * phase, deliberately split into slices; until then those pages would
+ * render as white cards marooned on a dark canvas.
+ *
+ * These rules remap only the classes those pages actually use, only under
+ * .dark, and sit outside every @layer so they outrank the utilities they
+ * shadow (unlayered CSS beats layered CSS regardless of specificity).
+ * Nothing written in this phase depends on the block; when the last page is
+ * converted it is deleted wholesale.
+ * ========================================================================= */
+.dark .bg-white {
+    background-color: var(--surface-opaque);
+}
+
+.dark .bg-gray-50 {
+    background-color: color-mix(in oklch, var(--content) 4%, var(--canvas));
+}
+
+.dark .bg-gray-100 {
+    background-color: color-mix(in oklch, var(--content) 8%, var(--canvas));
+}
+
+.dark .bg-gray-800,
+.dark .bg-gray-900 {
+    background-color: var(--accent);
+}
+
+.dark .bg-gray-700 {
+    background-color: var(--accent-hover);
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700 {
+    color: var(--content);
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500 {
+    color: var(--content-secondary);
+}
+
+.dark .text-gray-400 {
+    color: var(--content-tertiary);
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300 {
+    border-color: var(--hairline);
+}
+
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--hairline);
+}
+
+.dark .bg-indigo-600 {
+    background-color: var(--accent);
+}
+
+.dark .bg-indigo-700 {
+    background-color: var(--accent-hover);
+}
+
+.dark .bg-indigo-50,
+.dark .bg-indigo-100,
+.dark .bg-indigo-200 {
+    background-color: var(--accent-soft);
+}
+
+.dark .text-indigo-600,
+.dark .text-indigo-700,
+.dark .text-indigo-800,
+.dark .text-indigo-900 {
+    color: var(--accent);
+}
+
+.dark .border-indigo-200,
+.dark .border-indigo-400,
+.dark .border-indigo-500,
+.dark .border-indigo-600,
+.dark .border-indigo-700 {
+    border-color: var(--accent);
+}
+
+.dark .bg-red-50,
+.dark .bg-red-100,
+.dark .bg-red-200 {
+    background-color: var(--danger-soft);
+}
+
+.dark .bg-red-400,
+.dark .bg-red-500,
+.dark .bg-red-600,
+.dark .bg-red-700 {
+    background-color: var(--danger);
+}
+
+.dark .text-red-500,
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800 {
+    color: var(--danger);
+}
+
+.dark .border-red-200,
+.dark .border-red-300,
+.dark .border-red-400,
+.dark .border-red-500 {
+    border-color: var(--danger);
+}
+
+.dark .text-green-600 {
+    color: var(--success);
+}
+
+.dark .bg-amber-50 {
+    background-color: var(--warning-soft);
+}
+
+.dark .text-amber-700 {
+    color: var(--warning);
+}
