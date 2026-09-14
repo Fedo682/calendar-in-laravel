@@ -79,6 +79,21 @@ Route::middleware('auth')->group(function () {
         ->name('calendars.personal.events.destroy');
 
     // ===================================================================
+    // DESIGN SYSTEM
+    // ===================================================================
+
+    // Every primitive in every variant, for visual QA while the pages are
+    // converted. A development surface: abort() rather than a middleware, so
+    // the route is simply absent in production rather than being something to
+    // secure. 'testing' is included so the page is covered by a test that
+    // renders it, which is what catches a primitive whose props have drifted.
+    Route::get('styleguide', function () {
+        abort_unless(app()->environment(['local', 'testing']), 404);
+
+        return Inertia::render('Styleguide');
+    })->name('styleguide');
+
+    // ===================================================================
     // USER PREFERENCES (timezone, appearance)
     // ===================================================================
 
