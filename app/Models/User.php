@@ -173,4 +173,105 @@ class User extends Authenticatable implements MustVerifyEmail
             ->orWhereIn('group_id', $this->memberGroups()->select('groups.id'))
             ->pluck('id');
     }
+
+    /**
+     * Calendars this viewer personally belongs to: their own personal
+     * calendar, plus every calendar of a group they are an actual member
+     * of. Deliberately has no Super Admin branch - "my own affiliations"
+     * does not get bigger just because a platform role grants broader
+     * browsing rights elsewhere (that is accessibleCalendarIds()). This is
+     * the set conflict detection uses.
+     *
+     * @return Collection<int, int>
+     */
+    public function personalCalendarIds(): Collection
+    {
+        return Calendar::query()
+            ->where('owner_id', $this->id)
+            ->orWhereIn('group_id', $this->memberGroups()->select('groups.id'))
+            ->pluck('id');
+    }
+
+    /**
+     * Calendars that make up this viewer's own schedule for the
+     * dashboard's month grid and agenda: personalCalendarIds(), plus - for
+     * a Super Admin only - every GROUP calendar on the platform. This lets
+     * a Super Admin's dashboard still show every group's events without
+     * pulling in another individual user's personal calendar the way
+     * accessibleCalendarIds() does. That visibility instead comes only
+     * through teamBusyByGroup().
+     *
+     * @return Collection<int, int>
+     */
+    public function scheduleCalendarIds(): Collection
+    {
+        $own = $this->personalCalendarIds();
+
+        if (! $this->isSuperAdmin()) {
+            return $own;
+        }
+
+        return $own->merge(Calendar::query()->where('type', Calendar::TYPE_GROUP)->pluck('id'))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Groups this viewer administers: the ones where they hold the
+     * 'admin' role, or every group on the platform for a Super Admin.
+     *
+     * @return Collection<int, Group>
+     */
+    public function administeredGroups(): Collection
+    {
+        if ($this->isSuperAdmin()) {
+            return Group::query()->get();
+        }
+
+        $adminRoleId = Role::where('name', RoleName::Admin->value)->value('id');
+
+        return Group::query()
+            ->whereIn('id', GroupUser::where('user_id', $this->id)->where('role_id', $adminRoleId)->pluck('group_id'))
+            ->get();
+    }
+
+    /**
+     * For each group this viewer administers, the personal calendar ids of
+     * every OTHER member of that group.
+     *
+     * Three queries regardless of group or member count: the groups
+     * themselves, every membership row across all of them, and every
+     * personal calendar owned by any of those members. Grouping happens
+     * in PHP over already-fetched collections rather than one query per
+     * group.
+     *
+     * @return Collection<int, array{group: Group, calendar_ids: Collection<int, int>}>
+     */
+    public function teamBusyByGroup(): Collection
+    {
+        $groups = $this->administeredGroups();
+
+        if ($groups->isEmpty()) {
+            return collect();
+        }
+
+        $memberships = GroupUser::whereIn('group_id', $groups->pluck('id'))
+            ->where('user_id', '!=', $this->id)
+            ->get(['group_id', 'user_id']);
+
+        $calendarIdByOwner = Calendar::query()
+            ->where('type', Calendar::TYPE_PERSONAL)
+            ->whereIn('owner_id', $memberships->pluck('user_id')->unique())
+            ->pluck('id', 'owner_id');
+
+        return $groups->map(fn (Group $group) => [
+            'group' => $group,
+            'calendar_ids' => $memberships
+                ->where('group_id', $group->id)
+                ->pluck('user_id')
+                ->map(fn ($userId) => $calendarIdByOwner->get($userId))
+                ->filter()
+                ->values(),
+        ])->values();
+    }
 }
