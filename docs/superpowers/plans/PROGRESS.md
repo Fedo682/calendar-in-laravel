@@ -12,9 +12,11 @@ so the state ships with the work rather than trailing it.
 ## Resume here
 
 > **Next:** Task 1 of the paper UI conversion — auth pages and the guest layout.
-> Nothing started yet.
 >
-> Branch: not yet created. Cut `phase/6-ui-conversion` from the tip of `dev`.
+> Branch: `phase/6-ui-conversion`. **Stacked on
+> `feat/paper-theme-and-dashboard`, not on `dev`** — the conversion needs that
+> branch's tokens and its Dashboard reference conversion, and it was still
+> unmerged when this started. Rebase onto `dev` once the paper theme lands.
 
 ---
 
@@ -22,17 +24,17 @@ so the state ships with the work rather than trailing it.
 
 `docs/superpowers/plans/2026-09-14-paper-ui-conversion.md`
 
-| # | Task | State |
-|---|---|---|
-| 1 | Auth pages and the guest layout | [ ] not started |
-| 2 | Profile | [ ] not started |
-| 3 | Groups | [ ] not started |
-| 4 | Calendar list pages | [ ] not started |
-| 5 | Extract the shared event dialog | [ ] not started |
-| 6 | Calendar page chrome | [ ] not started |
-| 7 | The landing page | [ ] not started |
-| 8 | Render dates in the viewer's timezone | [ ] not started |
-| 9 | Delete the legacy bridge and the old primitives | [ ] not started |
+| #   | Task                                            | State           |
+| --- | ----------------------------------------------- | --------------- |
+| 1   | Auth pages and the guest layout                 | [ ] not started |
+| 2   | Profile                                         | [ ] not started |
+| 3   | Groups                                          | [ ] not started |
+| 4   | Calendar list pages                             | [ ] not started |
+| 5   | Extract the shared event dialog                 | [ ] not started |
+| 6   | Calendar page chrome                            | [ ] not started |
+| 7   | The landing page                                | [ ] not started |
+| 8   | Render dates in the viewer's timezone           | [ ] not started |
+| 9   | Delete the legacy bridge and the old primitives | [ ] not started |
 
 **Checkpoint:** stop after Task 4 for review before the calendar views are
 rebuilt.
@@ -41,16 +43,16 @@ rebuilt.
 
 ## Done and merged to `dev`
 
-| Phase | What |
-|---|---|
-| 0 | Seams — enums, config, observer, shared props. Fixed dead `flash` toasts and duplicate middleware. |
-| 1 | Vite/TS consolidation. Fixed a genuinely broken production build (clean checkout was 67/92). |
-| 2 | Per-user timezone, theme, week start, time format + `PATCH /profile/appearance`. |
-| 3 | `events.visibility`, personal calendars, the `EventRedactor` chokepoint. Closed two real leaks. |
-| 4 | Recurrence — RRULE storage, DST-correct expansion, overrides, this/following/all editing. |
-| 5 | Design system foundation — tokens, materials, 22 primitives, `AppShell`, `/styleguide`. |
-| — | `fix/npm-lockfile`, `fix/calendars-overview-null-group`. |
-| — | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix. |
+| Phase | What                                                                                               |
+| ----- | -------------------------------------------------------------------------------------------------- |
+| 0     | Seams — enums, config, observer, shared props. Fixed dead `flash` toasts and duplicate middleware. |
+| 1     | Vite/TS consolidation. Fixed a genuinely broken production build (clean checkout was 67/92).       |
+| 2     | Per-user timezone, theme, week start, time format + `PATCH /profile/appearance`.                   |
+| 3     | `events.visibility`, personal calendars, the `EventRedactor` chokepoint. Closed two real leaks.    |
+| 4     | Recurrence — RRULE storage, DST-correct expansion, overrides, this/following/all editing.          |
+| 5     | Design system foundation — tokens, materials, 22 primitives, `AppShell`, `/styleguide`.            |
+| —     | `fix/npm-lockfile`, `fix/calendars-overview-null-group`.                                           |
+| —     | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix.       |
 
 Test count at the last green run: **285 passing**.
 
@@ -65,7 +67,7 @@ Test count at the last green run: **285 passing**.
 - **Google two-way sync** — six incremental steps, OAuth through to the
   conflict audit UI. Against the REST API via the `Http` facade, because
   neither `google/apiclient` nor `laravel/socialite` supports Guzzle 8.
-  Google's calendar scopes are *sensitive*, so OAuth verification takes weeks —
+  Google's calendar scopes are _sensitive_, so OAuth verification takes weeks —
   worth starting the application early.
 
 ## Known gaps, deliberately deferred
@@ -77,7 +79,7 @@ Test count at the last green run: **285 passing**.
 - `types/auth.ts`'s `User` has an index signature that quietly defeats
   type-checking on user fields.
 - **Open question for the user:** whether to add `@php artisan migrate
-  --graceful` to the `dev` composer script. `composer dev` does not migrate,
+--graceful` to the `dev` composer script. `composer dev` does not migrate,
   and that has broken their local app twice after a merge.
 
 ---

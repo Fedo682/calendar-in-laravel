@@ -1,4 +1,4 @@
-import PrimaryButton from '@/components/PrimaryButton';
+import { Button } from '@/components/ui';
 import GuestLayout from '@/layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
@@ -20,35 +20,36 @@ export default function VerifyEmail({ status }: VerifyEmailProps) {
         <GuestLayout>
             <Head title="Email Verification" />
 
-            <div className="mb-4 text-sm text-gray-600">
+            <p className="text-content-secondary text-footnote mb-4">
                 Thanks for signing up! Before getting started, could you verify
                 your email address by clicking on the link we just emailed to
                 you? If you didn't receive the email, we will gladly send you
                 another.
-            </div>
+            </p>
 
             {status === 'verification-link-sent' && (
-                <div className="mb-4 text-sm font-medium text-green-600">
+                <p className="text-success text-footnote mb-4 font-medium">
                     A new verification link has been sent to the email address
                     you provided during registration.
-                </div>
+                </p>
             )}
 
-            <form onSubmit={submit}>
-                <div className="mt-4 flex items-center justify-between">
-                    <PrimaryButton disabled={processing}>
-                        Resend Verification Email
-                    </PrimaryButton>
+            <form
+                onSubmit={submit}
+                className="flex items-center justify-between pt-2"
+            >
+                <Button type="submit" loading={processing}>
+                    Resend verification email
+                </Button>
 
-                    <Link
-                        href={route('logout')}
-                        method="post"
-                        as="button"
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
-                    >
-                        Log Out
-                    </Link>
-                </div>
+                <Link
+                    href={route('logout')}
+                    method="post"
+                    as="button"
+                    className="text-content-secondary hover:text-content focus-visible:outline-accent rounded-control text-footnote underline focus-visible:outline-2"
+                >
+                    Log out
+                </Link>
             </form>
         </GuestLayout>
     );
