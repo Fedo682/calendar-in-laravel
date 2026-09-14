@@ -1,20 +1,34 @@
+import {
+    Avatar,
+    Badge,
+    Button,
+    Card,
+    Field,
+    Input,
+    Modal,
+    Select,
+    Textarea,
+} from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { GroupSummary } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Plus, Users } from 'lucide-react';
 import type { FormEventHandler, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 interface GroupProp extends GroupSummary {
     created_at: string;
 }
 
+/**
+ * The controller sends full Calendar models here - there is no `title`
+ * column, so that was always dead code from an earlier shape.
+ */
 interface Calendar {
     id: number;
-    name?: string;
-    title?: string;
-    [key: string]: unknown;
+    name: string;
+    color: string | null;
 }
 
 interface Member {
@@ -40,18 +54,9 @@ export default function GroupsShow({
     can_manage,
     is_super_admin,
 }: Props) {
-    const { flash } = usePageProps();
-    const [showToast, setShowToast] = useState(false);
     const [showAddMember, setShowAddMember] = useState(false);
     const [showBulkAdd, setShowBulkAdd] = useState(false);
-
-    useEffect(() => {
-        if (flash?.success) {
-            setShowToast(true);
-            const timer = setTimeout(() => setShowToast(false), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [flash]);
+    const [removing, setRemoving] = useState<Member | null>(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         user_id: '',
@@ -93,362 +98,329 @@ export default function GroupsShow({
         );
     };
 
-    const removeMember = (member: Member) => {
-        if (!confirm(`Remove ${member.name} from this group?`)) {
-            return;
-        }
-        router.delete(route('groups.members.destroy', [group.id, member.id]), {
-            preserveScroll: true,
-        });
+    const confirmRemoveMember = () => {
+        if (!removing) return;
+
+        router.delete(
+            route('groups.members.destroy', [group.id, removing.id]),
+            {
+                preserveScroll: true,
+                onSuccess: () => setRemoving(null),
+            },
+        );
     };
 
     return (
         <>
             <Head title={group.name} />
 
-            {showToast && (
-                <div className="fixed top-4 right-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
-                    {flash?.success}
-                </div>
-            )}
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <p className="text-content-secondary text-footnote mb-6">
+                    {group.description || 'No description'}
+                </p>
 
-            <div className="py-8">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <p className="mb-6 text-sm text-gray-500">
-                        {group.description || 'No description'}
-                    </p>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    {/* Calendars */}
+                    <div className="lg:col-span-2">
+                        <Card material="thin" padded={false}>
+                            <div className="border-hairline flex items-center justify-between border-b px-6 py-4">
+                                <h3 className="text-headline text-content">
+                                    Calendars
+                                </h3>
+                                <Link
+                                    href={`/groups/${group.id}/calendars`}
+                                    className="text-content-secondary hover:text-content text-caption1 font-medium"
+                                >
+                                    Manage
+                                </Link>
+                            </div>
+                            {calendars.length > 0 ? (
+                                <ul className="divide-hairline divide-y">
+                                    {calendars.map((calendar) => (
+                                        <li key={calendar.id}>
+                                            <Link
+                                                href={route(
+                                                    'groups.calendars.events.index',
+                                                    [group.id, calendar.id],
+                                                )}
+                                                className="hover:bg-surface-raised text-footnote flex items-center gap-3 px-6 py-3 transition"
+                                            >
+                                                <span
+                                                    className="size-2.5 shrink-0 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            calendar.color ||
+                                                            'var(--event-top)',
+                                                    }}
+                                                />
+                                                <span className="text-content truncate">
+                                                    {calendar.name}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-content-secondary text-footnote px-6 py-8 text-center">
+                                    No calendars in this group yet.
+                                </p>
+                            )}
+                        </Card>
+                    </div>
 
-                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                        {/* Calendars */}
-                        <div className="lg:col-span-2">
-                            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                                <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                                    <h3 className="text-sm font-semibold text-gray-900">
-                                        Calendars
-                                    </h3>
-                                    <Link
-                                        href={`/groups/${group.id}/calendars`}
-                                        className="text-xs font-medium text-gray-500 hover:text-gray-800"
-                                    >
-                                        Manage
-                                    </Link>
-                                </div>
-                                {calendars.length > 0 ? (
-                                    <ul className="divide-y divide-gray-100">
-                                        {calendars.map((calendar) => (
-                                            <li key={calendar.id}>
-                                                <Link
-                                                    href={route(
-                                                        'groups.calendars.events.index',
-                                                        [group.id, calendar.id],
-                                                    )}
-                                                    className="block px-6 py-3 text-sm text-gray-700 transition hover:bg-gray-50"
-                                                >
-                                                    {calendar.name ||
-                                                        calendar.title ||
-                                                        `Calendar #${calendar.id}`}
-                                                </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="px-6 py-8 text-center text-sm text-gray-500">
-                                        No calendars in this group yet.
-                                    </p>
+                    {/* Members */}
+                    <div>
+                        <Card material="thin" padded={false}>
+                            <div className="border-hairline flex items-center justify-between border-b px-6 py-4">
+                                <h3 className="text-headline text-content">
+                                    Members
+                                </h3>
+                                {can_manage && (
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => setShowBulkAdd(true)}
+                                            className="text-content-secondary hover:text-content text-caption1 font-medium"
+                                        >
+                                            Bulk add
+                                        </button>
+                                        <button
+                                            onClick={() =>
+                                                setShowAddMember(true)
+                                            }
+                                            className="text-accent hover:text-accent-hover text-caption1 flex items-center gap-1 font-medium"
+                                        >
+                                            <Plus className="size-3.5" />
+                                            Add
+                                        </button>
+                                    </div>
                                 )}
                             </div>
-                        </div>
 
-                        {/* Members */}
-                        <div>
-                            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                                <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                                    <h3 className="text-sm font-semibold text-gray-900">
-                                        Members
-                                    </h3>
-                                    {can_manage && (
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() =>
-                                                    setShowBulkAdd(true)
-                                                }
-                                                className="text-xs font-medium text-gray-500 hover:text-gray-800"
-                                            >
-                                                Bulk add
-                                            </button>
-                                            <button
-                                                onClick={() =>
-                                                    setShowAddMember(true)
-                                                }
-                                                className="text-xs font-medium text-gray-500 hover:text-gray-800"
-                                            >
-                                                + Add
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <ul className="divide-y divide-gray-100">
-                                    {members.map((member) => (
-                                        <li
-                                            key={member.id}
-                                            className="flex items-center justify-between gap-2 px-6 py-3"
-                                        >
+                            <ul className="divide-hairline divide-y">
+                                {members.map((member) => (
+                                    <li
+                                        key={member.id}
+                                        className="flex items-center justify-between gap-2 px-6 py-3"
+                                    >
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <Avatar
+                                                name={member.name}
+                                                size="sm"
+                                            />
                                             <div className="min-w-0">
-                                                <p className="truncate text-sm font-medium text-gray-900">
+                                                <p className="text-content text-footnote truncate font-medium">
                                                     {member.name}
                                                 </p>
-                                                <p className="truncate text-xs text-gray-500">
+                                                <p className="text-content-tertiary text-caption1 truncate">
                                                     {member.email}
                                                 </p>
                                             </div>
-                                            <div className="flex shrink-0 items-center gap-2">
-                                                <span
-                                                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                                        member.role === 'admin'
-                                                            ? 'bg-amber-50 text-amber-700'
-                                                            : 'bg-gray-100 text-gray-600'
-                                                    }`}
-                                                >
-                                                    {member.role ?? 'member'}
-                                                </span>
-                                                {can_manage && (
-                                                    <>
-                                                        {is_super_admin && (
-                                                            <button
-                                                                title="Toggle admin role"
-                                                                onClick={() =>
-                                                                    changeRole(
-                                                                        member,
-                                                                        member.role ===
-                                                                            'admin'
-                                                                            ? 'member'
-                                                                            : 'admin',
-                                                                    )
-                                                                }
-                                                                className="text-xs font-medium text-gray-500 hover:text-gray-800"
-                                                            >
-                                                                {member.role ===
-                                                                'admin'
-                                                                    ? 'Demote'
-                                                                    : 'Promote'}
-                                                            </button>
-                                                        )}
-                                                        {(is_super_admin ||
-                                                            member.role !==
-                                                                'admin') && (
-                                                            <button
-                                                                title="Remove member"
-                                                                onClick={() =>
-                                                                    removeMember(
-                                                                        member,
-                                                                    )
-                                                                }
-                                                                className="text-xs font-medium text-red-500 hover:text-red-700"
-                                                            >
-                                                                Remove
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                        </li>
-                                    ))}
-                                    {members.length === 0 && (
-                                        <li className="px-6 py-8 text-center text-sm text-gray-500">
-                                            No members yet.
-                                        </li>
-                                    )}
-                                </ul>
-                            </div>
-                        </div>
+                                        </div>
+                                        <div className="flex shrink-0 items-center gap-2">
+                                            <Badge
+                                                tone={
+                                                    member.role === 'admin'
+                                                        ? 'warning'
+                                                        : 'neutral'
+                                                }
+                                            >
+                                                {member.role ?? 'member'}
+                                            </Badge>
+                                            {can_manage && (
+                                                <>
+                                                    {is_super_admin && (
+                                                        <button
+                                                            title="Toggle admin role"
+                                                            onClick={() =>
+                                                                changeRole(
+                                                                    member,
+                                                                    member.role ===
+                                                                        'admin'
+                                                                        ? 'member'
+                                                                        : 'admin',
+                                                                )
+                                                            }
+                                                            className="text-content-secondary hover:text-content text-caption1 font-medium"
+                                                        >
+                                                            {member.role ===
+                                                            'admin'
+                                                                ? 'Demote'
+                                                                : 'Promote'}
+                                                        </button>
+                                                    )}
+                                                    {(is_super_admin ||
+                                                        member.role !==
+                                                            'admin') && (
+                                                        <button
+                                                            title="Remove member"
+                                                            onClick={() =>
+                                                                setRemoving(
+                                                                    member,
+                                                                )
+                                                            }
+                                                            className="text-danger hover:text-danger text-caption1 font-medium hover:opacity-75"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </li>
+                                ))}
+                                {members.length === 0 && (
+                                    <li className="text-content-secondary text-footnote px-6 py-8 text-center">
+                                        No members yet.
+                                    </li>
+                                )}
+                            </ul>
+                        </Card>
                     </div>
                 </div>
             </div>
 
-            {/* Add Member Modal */}
-            <Dialog
+            {/* Add member */}
+            <Modal
                 open={showAddMember}
                 onClose={() => setShowAddMember(false)}
-                className="relative z-50"
+                title="Add member"
+                width="sm"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setShowAddMember(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="add-member-form"
+                            loading={processing}
+                        >
+                            Add
+                        </Button>
+                    </>
+                }
             >
-                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-                <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
-                        <DialogTitle className="mb-4 text-base font-semibold text-gray-900">
-                            Add Member
-                        </DialogTitle>
-                        <form onSubmit={submitAddMember} className="space-y-4">
-                            <div>
-                                <label
-                                    htmlFor="user_id"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    User ID
-                                </label>
-                                <input
-                                    id="user_id"
-                                    type="number"
-                                    value={data.user_id}
-                                    onChange={(e) =>
-                                        setData('user_id', e.target.value)
-                                    }
-                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                                        errors.user_id
-                                            ? 'border-red-500'
-                                            : 'border-gray-300'
-                                    }`}
-                                />
-                                {errors.user_id && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.user_id}
-                                    </p>
-                                )}
-                            </div>
+                <form
+                    id="add-member-form"
+                    onSubmit={submitAddMember}
+                    className="space-y-4"
+                >
+                    <Field label="User ID" error={errors.user_id}>
+                        <Input
+                            id="user_id"
+                            type="number"
+                            value={data.user_id}
+                            onChange={(e) => setData('user_id', e.target.value)}
+                            invalid={Boolean(errors.user_id)}
+                        />
+                    </Field>
 
-                            <div>
-                                <label
-                                    htmlFor="role"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Role
-                                </label>
-                                <select
-                                    id="role"
-                                    value={data.role}
-                                    onChange={(e) =>
-                                        setData('role', e.target.value)
-                                    }
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                >
-                                    <option value="member">Member</option>
-                                    {is_super_admin && (
-                                        <option value="admin">Admin</option>
-                                    )}
-                                </select>
-                                {errors.role && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.role}
-                                    </p>
-                                )}
-                            </div>
+                    <Field label="Role" error={errors.role}>
+                        <Select
+                            id="role"
+                            value={data.role}
+                            onChange={(e) => setData('role', e.target.value)}
+                        >
+                            <option value="member">Member</option>
+                            {is_super_admin && (
+                                <option value="admin">Admin</option>
+                            )}
+                        </Select>
+                    </Field>
+                </form>
+            </Modal>
 
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowAddMember(false)}
-                                    className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="flex-1 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
-                                >
-                                    {processing ? 'Adding...' : 'Add'}
-                                </button>
-                            </div>
-                        </form>
-                    </DialogPanel>
-                </div>
-            </Dialog>
-
-            {/* Bulk Add Members Modal */}
-            <Dialog
+            {/* Bulk add members */}
+            <Modal
                 open={showBulkAdd}
                 onClose={() => setShowBulkAdd(false)}
-                className="relative z-50"
+                title="Bulk add members"
+                description="Paste emails separated by commas, spaces, or one per line. Each person gets an email in the background once added."
+                width="md"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setShowBulkAdd(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="bulk-add-form"
+                            loading={bulkForm.processing}
+                        >
+                            Add all
+                        </Button>
+                    </>
+                }
             >
-                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-                <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-                        <DialogTitle className="mb-1 text-base font-semibold text-gray-900">
-                            Bulk Add Members
-                        </DialogTitle>
-                        <p className="mb-4 text-sm text-gray-500">
-                            Paste emails separated by commas, spaces, or one per
-                            line. Each person gets an email in the background
-                            once added.
-                        </p>
-                        <form onSubmit={submitBulkAdd} className="space-y-4">
-                            <div>
-                                <label
-                                    htmlFor="emails"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Emails
-                                </label>
-                                <textarea
-                                    id="emails"
-                                    rows={5}
-                                    value={bulkForm.data.emails}
-                                    onChange={(e) =>
-                                        bulkForm.setData(
-                                            'emails',
-                                            e.target.value,
-                                        )
-                                    }
-                                    placeholder={
-                                        'jane@example.com\njohn@example.com'
-                                    }
-                                    className={`w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                                        bulkForm.errors.emails
-                                            ? 'border-red-500'
-                                            : 'border-gray-300'
-                                    }`}
-                                />
-                                {bulkForm.errors.emails && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {bulkForm.errors.emails}
-                                    </p>
-                                )}
-                            </div>
+                <form
+                    id="bulk-add-form"
+                    onSubmit={submitBulkAdd}
+                    className="space-y-4"
+                >
+                    <Field label="Emails" error={bulkForm.errors.emails}>
+                        <Textarea
+                            id="emails"
+                            rows={5}
+                            value={bulkForm.data.emails}
+                            onChange={(e) =>
+                                bulkForm.setData('emails', e.target.value)
+                            }
+                            placeholder={'jane@example.com\njohn@example.com'}
+                            invalid={Boolean(bulkForm.errors.emails)}
+                        />
+                    </Field>
 
-                            <div>
-                                <label
-                                    htmlFor="bulk_role"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Role
-                                </label>
-                                <select
-                                    id="bulk_role"
-                                    value={bulkForm.data.role}
-                                    onChange={(e) =>
-                                        bulkForm.setData('role', e.target.value)
-                                    }
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                >
-                                    <option value="member">Member</option>
-                                    {is_super_admin && (
-                                        <option value="admin">Admin</option>
-                                    )}
-                                </select>
-                            </div>
+                    <Field label="Role">
+                        <Select
+                            id="bulk_role"
+                            value={bulkForm.data.role}
+                            onChange={(e) =>
+                                bulkForm.setData('role', e.target.value)
+                            }
+                        >
+                            <option value="member">Member</option>
+                            {is_super_admin && (
+                                <option value="admin">Admin</option>
+                            )}
+                        </Select>
+                    </Field>
+                </form>
+            </Modal>
 
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowBulkAdd(false)}
-                                    className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={bulkForm.processing}
-                                    className="flex-1 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
-                                >
-                                    {bulkForm.processing
-                                        ? 'Adding...'
-                                        : 'Add All'}
-                                </button>
-                            </div>
-                        </form>
-                    </DialogPanel>
-                </div>
-            </Dialog>
+            {/* Remove member confirmation */}
+            <Modal
+                open={removing !== null}
+                onClose={() => setRemoving(null)}
+                title="Remove member"
+                description={
+                    removing
+                        ? `Remove ${removing.name} from this group?`
+                        : undefined
+                }
+                width="sm"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setRemoving(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmRemoveMember}
+                        >
+                            Remove
+                        </Button>
+                    </>
+                }
+            />
         </>
     );
 }
@@ -457,13 +429,14 @@ function GroupHeading() {
     const { group } = usePageProps<{ group: GroupProp }>();
 
     return (
-        <div className="flex items-center justify-between">
-            <h2 className="text-xl leading-tight font-semibold text-gray-800">
+        <div className="flex items-center justify-between gap-4">
+            <h2 className="text-headline text-chrome-content flex items-center gap-2">
+                <Users className="size-4 opacity-70" />
                 {group.name}
             </h2>
             <Link
                 href={route('groups.index')}
-                className="text-sm font-medium text-gray-500 hover:text-gray-800"
+                className="text-chrome-content/70 hover:text-chrome-content text-footnote font-medium"
             >
                 Back to groups
             </Link>

@@ -11,7 +11,10 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next:** Task 3 of the paper UI conversion — Groups.
+> **Next:** Task 4 of the paper UI conversion — Calendar list pages.
+>
+> **Checkpoint reached after this commit** — Tasks 1-4 of the plan are done.
+> Stop and let the user review before Task 5 rebuilds the calendar views.
 >
 > Branch: `phase/6-ui-conversion`. **Stacked on
 > `feat/paper-theme-and-dashboard`, not on `dev`** — the conversion needs that
@@ -27,8 +30,8 @@ so the state ships with the work rather than trailing it.
 | #   | Task                                            | State           |
 | --- | ----------------------------------------------- | --------------- |
 | 1   | Auth pages and the guest layout                 | [x] done        |
-| 2   | Profile                                         | [x] done         |
-| 3   | Groups                                          | [ ] not started |
+| 2   | Profile                                         | [x] done        |
+| 3   | Groups                                          | [x] done         |
 | 4   | Calendar list pages                             | [ ] not started |
 | 5   | Extract the shared event dialog                 | [ ] not started |
 | 6   | Calendar page chrome                            | [ ] not started |
