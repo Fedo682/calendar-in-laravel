@@ -129,81 +129,117 @@
     --color-busy: var(--busy);
 
     --color-overlay: var(--overlay);
+
+    /* Paper-specific roles. The chrome is a solid bar rather than a tint of
+       the canvas, and "today" is its own colour because on a paper calendar
+       it is the one thing printed in red. */
+    --color-chrome: var(--chrome);
+    --color-chrome-content: var(--chrome-content);
+    --color-today: var(--today);
+    --color-today-content: var(--today-content);
+    --color-event: var(--event-top);
+    --color-event-deep: var(--event-bottom);
 }
 
-/* ---- Dark (the default) -------------------------------------------------
-   `:root` and `.dark` share the block so the app is dark even in the split
-   second before the head script runs, and stays dark if that script is
-   blocked outright. */
+/* ---- Light: paper (the default) -----------------------------------------
+   A desk calendar, not a dark app. The canvas is cream stock, the rules are
+   drawn in warm pencil grey, the chrome is a solid navy bar, and today is
+   printed in red the way a tear-off calendar prints it.
+
+   `:root` carries these so the app is paper even in the split second before
+   the head script runs, and stays paper if that script is blocked. */
 :root,
-.dark {
-    color-scheme: dark;
-
-    --canvas: oklch(0.168 0.008 265);
-    /* The frosted-card fill: a few percent of white, which reads as a tint
-       of whatever the blur pulls through from behind it. */
-    --surface: oklch(1 0 0 / 0.055);
-    --surface-raised: oklch(1 0 0 / 0.09);
-    --surface-opaque: oklch(0.225 0.009 265);
-    --hairline: oklch(1 0 0 / 0.12);
-
-    --content: oklch(0.972 0.003 265);
-    --content-secondary: oklch(0.735 0.009 265);
-    --content-tertiary: oklch(0.575 0.011 265);
-    --content-inverse: oklch(0.168 0.008 265);
-
-    /* System Blue, dark appearance (#0A84FF). */
-    --accent: oklch(0.652 0.191 258);
-    --accent-hover: oklch(0.708 0.176 258);
-    --accent-soft: oklch(0.652 0.191 258 / 0.18);
-    --on-accent: oklch(1 0 0);
-
-    --danger: oklch(0.665 0.222 27); /* System Red    #FF453A */
-    --danger-soft: oklch(0.665 0.222 27 / 0.18);
-    --success: oklch(0.78 0.185 148); /* System Green  #30D158 */
-    --success-soft: oklch(0.78 0.185 148 / 0.18);
-    --warning: oklch(0.78 0.166 62); /* System Orange #FF9F0A */
-    --warning-soft: oklch(0.78 0.166 62 / 0.18);
-
-    --busy: oklch(0.52 0.012 265);
-
-    --overlay: oklch(0 0 0 / 0.55);
-}
-
-/* ---- Light --------------------------------------------------------------
-   Not a tint of the dark theme. The materials invert: glass in light mode is
-   mostly-opaque white letting a little colour through, which is how the same
-   blur reads as "frosted" rather than as "dirty". */
 .light {
     color-scheme: light;
 
-    --canvas: oklch(0.968 0.002 265);
-    --surface: oklch(1 0 0 / 0.72);
-    --surface-raised: oklch(1 0 0 / 0.88);
-    --surface-opaque: oklch(1 0 0);
-    --hairline: oklch(0.21 0.01 265 / 0.13);
+    --canvas: #fbf9f5; /* cream stock */
+    /* A sheet sitting on the desk: brighter than the canvas it lies on, and
+       fully opaque. Paper does not transmit what is behind it, which is why
+       the material utilities below resolve to solid fills here. */
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-opaque: #ffffff;
+    --hairline: #e2ddd3; /* warm pencil rule */
 
-    --content: oklch(0.21 0.01 265);
-    --content-secondary: oklch(0.455 0.012 265);
-    --content-tertiary: oklch(0.615 0.011 265);
-    --content-inverse: oklch(1 0 0);
+    --content: #1e293b; /* the same navy as the chrome, used as ink */
+    --content-secondary: #6b7280;
+    --content-tertiary: #9ca3af;
+    --content-inverse: #ffffff;
 
-    /* System Blue, light appearance (#007AFF). */
-    --accent: oklch(0.588 0.222 258);
-    --accent-hover: oklch(0.535 0.213 258);
-    --accent-soft: oklch(0.588 0.222 258 / 0.12);
-    --on-accent: oklch(1 0 0);
+    --chrome: #1e293b; /* solid header bar */
+    --chrome-content: #ffffff;
 
-    --danger: oklch(0.628 0.237 29); /* System Red    #FF3B30 */
-    --danger-soft: oklch(0.628 0.237 29 / 0.1);
-    --success: oklch(0.723 0.192 149); /* System Green  #34C759 */
-    --success-soft: oklch(0.723 0.192 149 / 0.12);
-    --warning: oklch(0.762 0.164 63); /* System Orange #FF9500 */
-    --warning-soft: oklch(0.762 0.164 63 / 0.14);
+    --accent: #3b72b2;
+    --accent-hover: #1b4275;
+    --accent-soft: rgb(59 114 178 / 0.12);
+    --on-accent: #ffffff;
 
-    --busy: oklch(0.72 0.011 265);
+    --today: #b82a2a; /* tear-off red */
+    --today-content: #ffffff;
 
-    --overlay: oklch(0.21 0.01 265 / 0.32);
+    /* Default event pill. Calendars carry their own colour and override
+       these per event; this is the fallback for one that has none. */
+    --event-top: #3b72b2;
+    --event-bottom: #1b4275;
+
+    --danger: #b82a2a;
+    --danger-soft: rgb(184 42 42 / 0.1);
+    --success: #2f7d54;
+    --success-soft: rgb(47 125 84 / 0.12);
+    --warning: #b5761f;
+    --warning-soft: rgb(181 118 31 / 0.14);
+
+    /* Redacted events. Deliberately colourless - a busy block is the absence
+       of information, and giving it a hue would imply one. */
+    --busy: #c9c2b6;
+
+    --overlay: rgb(30 41 59 / 0.32);
+}
+
+/* ---- Dark: the same calendar at night -----------------------------------
+   Not an inversion. The stock goes to warm charcoal rather than to black, so
+   it still reads as paper rather than as a void, and the red keeps its
+   identity while dropping enough chroma to stop it glowing. */
+.dark {
+    color-scheme: dark;
+
+    --canvas: #171614; /* charcoal, warm - no blue cast */
+    --surface: #211f1d;
+    --surface-raised: #2a2725;
+    --surface-opaque: #211f1d;
+    --hairline: #383430;
+
+    --content: #f5f1ea; /* paper white, as ink */
+    --content-secondary: #a8a29a;
+    --content-tertiary: #7a746c;
+    --content-inverse: #171614;
+
+    /* The navy reads as night on its own, so the chrome barely moves - it is
+       the one surface that is the same object in both appearances. */
+    --chrome: #1a2435;
+    --chrome-content: #f5f1ea;
+
+    --accent: #6ea5de;
+    --accent-hover: #8bbaeb;
+    --accent-soft: rgb(110 165 222 / 0.18);
+    --on-accent: #12203a;
+
+    --today: #e06060;
+    --today-content: #1a1210;
+
+    --event-top: #4f83c0;
+    --event-bottom: #2a5488;
+
+    --danger: #e06060;
+    --danger-soft: rgb(224 96 96 / 0.18);
+    --success: #62b184;
+    --success-soft: rgb(98 177 132 / 0.18);
+    --warning: #d9a250;
+    --warning-soft: rgb(217 162 80 / 0.18);
+
+    --busy: #4a453f;
+
+    --overlay: rgb(10 9 8 / 0.6);
 }
 
 /* =========================================================================
@@ -234,9 +270,13 @@
  */
 @utility material-* {
     background-color: var(--surface);
-    -webkit-backdrop-filter: blur(--value(--blur-*)) saturate(180%);
-    backdrop-filter: blur(--value(--blur-*)) saturate(180%);
     border: 1px solid var(--hairline);
+    /* Paper does not transmit light, so --surface is opaque and the blur has
+       nothing to show through. It is kept only because it still softens what
+       passes *under* a floating surface while scrolling - a menu or a modal
+       over the grid - and costs nothing when the fill above it is solid. */
+    -webkit-backdrop-filter: blur(--value(--blur-*));
+    backdrop-filter: blur(--value(--blur-*));
 }
 
 /* Tailwind has an --ease-* theme namespace but no --duration-* one, so the
@@ -411,123 +451,126 @@
  * phase, deliberately split into slices; until then those pages would
  * render as white cards marooned on a dark canvas.
  *
- * These rules remap only the classes those pages actually use, only under
- * .dark, and sit outside every @layer so they outrank the utilities they
- * shadow (unlayered CSS beats layered CSS regardless of specificity).
+ * These rules remap only the classes those pages actually use, and sit
+ * outside every @layer so they outrank the utilities they shadow (unlayered
+ * CSS beats layered CSS regardless of specificity). They are deliberately
+ * not scoped to an appearance: the tokens they point at already swap, and
+ * scoping to .dark would leave Tailwind's cool greys on the warm paper
+ * canvas in light mode.
  * Nothing written in this phase depends on the block; when the last page is
  * converted it is deleted wholesale.
  * ========================================================================= */
-.dark .bg-white {
+.bg-white {
     background-color: var(--surface-opaque);
 }
 
-.dark .bg-gray-50 {
+.bg-gray-50 {
     background-color: color-mix(in oklch, var(--content) 4%, var(--canvas));
 }
 
-.dark .bg-gray-100 {
+.bg-gray-100 {
     background-color: color-mix(in oklch, var(--content) 8%, var(--canvas));
 }
 
-.dark .bg-gray-800,
-.dark .bg-gray-900 {
+.bg-gray-800,
+.bg-gray-900 {
     background-color: var(--accent);
 }
 
-.dark .bg-gray-700 {
+.bg-gray-700 {
     background-color: var(--accent-hover);
 }
 
-.dark .text-gray-900,
-.dark .text-gray-800,
-.dark .text-gray-700 {
+.text-gray-900,
+.text-gray-800,
+.text-gray-700 {
     color: var(--content);
 }
 
-.dark .text-gray-600,
-.dark .text-gray-500 {
+.text-gray-600,
+.text-gray-500 {
     color: var(--content-secondary);
 }
 
-.dark .text-gray-400 {
+.text-gray-400 {
     color: var(--content-tertiary);
 }
 
-.dark .border-gray-100,
-.dark .border-gray-200,
-.dark .border-gray-300 {
+.border-gray-100,
+.border-gray-200,
+.border-gray-300 {
     border-color: var(--hairline);
 }
 
-.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
-.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+.divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
     border-color: var(--hairline);
 }
 
-.dark .bg-indigo-600 {
+.bg-indigo-600 {
     background-color: var(--accent);
 }
 
-.dark .bg-indigo-700 {
+.bg-indigo-700 {
     background-color: var(--accent-hover);
 }
 
-.dark .bg-indigo-50,
-.dark .bg-indigo-100,
-.dark .bg-indigo-200 {
+.bg-indigo-50,
+.bg-indigo-100,
+.bg-indigo-200 {
     background-color: var(--accent-soft);
 }
 
-.dark .text-indigo-600,
-.dark .text-indigo-700,
-.dark .text-indigo-800,
-.dark .text-indigo-900 {
+.text-indigo-600,
+.text-indigo-700,
+.text-indigo-800,
+.text-indigo-900 {
     color: var(--accent);
 }
 
-.dark .border-indigo-200,
-.dark .border-indigo-400,
-.dark .border-indigo-500,
-.dark .border-indigo-600,
-.dark .border-indigo-700 {
+.border-indigo-200,
+.border-indigo-400,
+.border-indigo-500,
+.border-indigo-600,
+.border-indigo-700 {
     border-color: var(--accent);
 }
 
-.dark .bg-red-50,
-.dark .bg-red-100,
-.dark .bg-red-200 {
+.bg-red-50,
+.bg-red-100,
+.bg-red-200 {
     background-color: var(--danger-soft);
 }
 
-.dark .bg-red-400,
-.dark .bg-red-500,
-.dark .bg-red-600,
-.dark .bg-red-700 {
+.bg-red-400,
+.bg-red-500,
+.bg-red-600,
+.bg-red-700 {
     background-color: var(--danger);
 }
 
-.dark .text-red-500,
-.dark .text-red-600,
-.dark .text-red-700,
-.dark .text-red-800 {
+.text-red-500,
+.text-red-600,
+.text-red-700,
+.text-red-800 {
     color: var(--danger);
 }
 
-.dark .border-red-200,
-.dark .border-red-300,
-.dark .border-red-400,
-.dark .border-red-500 {
+.border-red-200,
+.border-red-300,
+.border-red-400,
+.border-red-500 {
     border-color: var(--danger);
 }
 
-.dark .text-green-600 {
+.text-green-600 {
     color: var(--success);
 }
 
-.dark .bg-amber-50 {
+.bg-amber-50 {
     background-color: var(--warning-soft);
 }
 
-.dark .text-amber-700 {
+.text-amber-700 {
     color: var(--warning);
 }

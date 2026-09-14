@@ -17,11 +17,11 @@ export type ResolvedAppearance = 'light' | 'dark';
 const STORAGE_KEY = 'theme';
 
 /**
- * The app is dark by default, so the media query asks about *light*: a client
- * that reports no preference at all falls through to dark rather than to the
- * browser's own default of light.
+ * Paper is the design and paper is light, so this asks the ordinary question:
+ * go dark only when the OS actually asks for dark. A client that reports no
+ * preference falls through to paper, which is what :root carries.
  */
-const LIGHT_QUERY = '(prefers-color-scheme: light)';
+const DARK_QUERY = '(prefers-color-scheme: dark)';
 
 function readStoredAppearance(): Appearance | null {
     try {
@@ -50,7 +50,7 @@ export function resolveAppearance(value: Appearance): ResolvedAppearance {
         return value;
     }
 
-    return window.matchMedia(LIGHT_QUERY).matches ? 'light' : 'dark';
+    return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
 }
 
 /**
@@ -102,7 +102,7 @@ export function useAppearance(): UseAppearanceResult {
     }, [storedOnServer]);
 
     useEffect(() => {
-        const query = window.matchMedia(LIGHT_QUERY);
+        const query = window.matchMedia(DARK_QUERY);
 
         const sync = () => {
             applyAppearance(appearance);

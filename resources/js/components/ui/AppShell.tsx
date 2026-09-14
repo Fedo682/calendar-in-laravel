@@ -351,9 +351,10 @@ export interface AppShellProps {
  * navigations - so the sidebar's scroll position, its collapsed state and the
  * filter text all survive a page change, and none of this subtree remounts.
  *
- * Materials used here, and only here: `material-regular` on the sidebar and
- * the toolbar (persistent chrome), `material-thick` on anything the toolbar
- * opens (menus, the mobile sheet). Page content gets flat surfaces.
+ * The sidebar and toolbar are a single solid bar in this design - a desk
+ * calendar's header, not a frosted panel - so they take `bg-chrome` rather
+ * than a material. Blur is left to the things the toolbar opens (menus, the
+ * mobile sheet), which genuinely float over scrolling content.
  */
 export default function AppShell({
     header,
@@ -421,7 +422,7 @@ export default function AppShell({
                 place backdrop-filter genuinely hurts. */}
             <aside
                 className={cn(
-                    'material-regular ease-hig duration-base fixed inset-y-0 start-0 z-40 hidden flex-col border-y-0 border-s-0 transition-[width] lg:flex',
+                    'bg-chrome text-chrome-content ease-hig duration-base fixed inset-y-0 start-0 z-40 hidden flex-col transition-[width] lg:flex',
                     collapsed ? 'w-16' : 'w-64',
                 )}
             >
@@ -464,7 +465,7 @@ export default function AppShell({
                     collapsed ? 'lg:ps-16' : 'lg:ps-64',
                 )}
             >
-                <header className="material-regular sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-x-0 border-t-0 px-3 sm:px-4">
+                <header className="bg-chrome text-chrome-content sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 px-3 sm:px-4">
                     <button
                         type="button"
                         onClick={() => {

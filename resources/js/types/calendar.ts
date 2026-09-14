@@ -49,6 +49,14 @@ export interface CalendarEvent {
  */
 export interface GridEvent extends CalendarEvent {
     key: string;
+    /**
+     * The owning calendar's colour, which is what the event badge's gradient
+     * is derived from. Null when the calendar has none, in which case the
+     * badge falls back to the theme's default event colour.
+     */
+    calendar_color?: string | null;
+    /** Redacted events render as a flat, colourless busy block. */
+    is_redacted?: boolean;
 }
 
 /**
