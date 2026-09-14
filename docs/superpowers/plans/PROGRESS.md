@@ -11,7 +11,16 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next:** Task 7 of the paper UI conversion — the landing page.
+> **Next (higher priority than the UI conversion plan below):** the user
+> asked for team busy-visibility, conflict scoping, a CEO/team-busy panel,
+> and member-to-admin messaging, to be finished **before** resuming Task 7.
+> Design spec written and approved by the user; awaiting the user's review
+> of the written spec file before `superpowers:writing-plans` is invoked:
+> `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`.
+>
+> Once that feature is planned, implemented, tested and merged, resume the
+> paper UI conversion plan at **Task 7 of the paper UI conversion — the
+> landing page.**
 >
 > **Two manual browser checks are still outstanding, neither performed** - no
 > browser automation is available in this session:
