@@ -12,24 +12,17 @@ import {
     Textarea,
 } from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import type { GridEvent, Occurrence, Visibility } from '@/types/calendar';
+import type {
+    GridEvent,
+    Occurrence,
+    Visibility,
+    WritableCalendar,
+} from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
 import { Head, router, useForm } from '@inertiajs/react';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
-
-/** One calendar the viewer may create an event on. */
-interface WritableCalendar {
-    id: number;
-    name: string;
-    color: string | null;
-    type: string;
-    group_id: number | null;
-    group_name: string | null;
-    /** Which existing endpoint a create posts to. */
-    create_url: string;
-}
 
 interface UpcomingEvent extends Occurrence {
     /**

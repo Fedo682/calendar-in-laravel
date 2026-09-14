@@ -11,10 +11,18 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next:** Task 5 of the paper UI conversion — extract the shared event
-> dialog. **Checkpoint reached** — Tasks 1-4 are done and this is a natural
-> pause point before the calendar views get rebuilt. Ask the user before
-> continuing if this session is resuming cold.
+> **Next:** Task 6 of the paper UI conversion — calendar page chrome
+> (toolbar/grid conversion for Events/Index, Personal, and pointing Dashboard
+> at the shared EventDialog).
+>
+> **Task 5's Step 9 (manual browser check of the recurrence scope flow) was
+> NOT performed** — no browser automation is available in this session. The
+> HTTP-level behaviour it would exercise is covered by RecurringEventTest
+> (14/14) and RecurrenceEditorTest, and the wiring was verified by static
+> review, but nobody has actually clicked through "edit one occurrence ->
+> choose 'This event' -> confirm only that occurrence changed" in a real
+> browser since the extraction. Do this by hand before treating Task 5 as
+> fully closed.
 >
 > Branch: `phase/6-ui-conversion`. **Stacked on
 > `feat/paper-theme-and-dashboard`, not on `dev`** — the conversion needs that
@@ -32,12 +40,14 @@ so the state ships with the work rather than trailing it.
 | 1   | Auth pages and the guest layout                 | [x] done        |
 | 2   | Profile                                         | [x] done        |
 | 3   | Groups                                          | [x] done        |
-| 4   | Calendar list pages                             | [x] done         |
-| 5   | Extract the shared event dialog                 | [ ] not started |
+| 4   | Calendar list pages                             | [x] done        |
+| 5   | Extract the shared event dialog                 | [x] done*        |
 | 6   | Calendar page chrome                            | [ ] not started |
 | 7   | The landing page                                | [ ] not started |
 | 8   | Render dates in the viewer's timezone           | [ ] not started |
 | 9   | Delete the legacy bridge and the old primitives | [ ] not started |
+
+\* Task 5: manual recurrence-flow check (its Step 9) still outstanding - see above.
 
 **Checkpoint:** stop after Task 4 for review before the calendar views are
 rebuilt.

@@ -93,3 +93,18 @@ export interface Occurrence extends CalendarEvent {
     /** Null for events on a personal calendar. */
     group_name: string | null;
 }
+
+/**
+ * One calendar the viewer may create an event on, as sent by
+ * WritableCalendars on the server.
+ */
+export interface WritableCalendar {
+    id: number;
+    name: string;
+    color: string | null;
+    type: string;
+    group_id: number | null;
+    group_name: string | null;
+    /** Which existing endpoint a create posts to. */
+    create_url: string;
+}
