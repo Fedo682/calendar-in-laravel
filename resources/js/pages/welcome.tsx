@@ -1,141 +1,144 @@
+import ApplicationLogo from '@/components/ApplicationLogo';
+import { Card, LinkButton } from '@/components/ui';
 import { Head } from '@inertiajs/react';
+import { CalendarDays, Link2, Users, Zap, type LucideIcon } from 'lucide-react';
 
-export default function Welcome() {
+interface WelcomeProps {
+    canLogin: boolean;
+    canRegister: boolean;
+}
+
+const FEATURES: Array<{
+    icon: LucideIcon;
+    title: string;
+    description: string;
+}> = [
+    {
+        icon: CalendarDays,
+        title: 'Multiple calendars',
+        description: 'Manage calendars for different groups all in one place.',
+    },
+    {
+        icon: Users,
+        title: 'Group management',
+        description: 'Create, organize, and manage multiple groups with ease.',
+    },
+    {
+        icon: Link2,
+        title: 'Instant sharing',
+        description: 'Share events and invite group members with one click.',
+    },
+    {
+        icon: Zap,
+        title: 'Real-time sync',
+        description: 'Every event updates instantly across all group members.',
+    },
+];
+
+export default function Welcome({ canLogin, canRegister }: WelcomeProps) {
     return (
         <>
             <Head title="Welcome to Group Calendar" />
 
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-                {/* Navigation */}
-                <nav className="bg-white shadow">
-                    <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+            <div className="bg-canvas min-h-screen">
+                <nav className="border-hairline border-b">
+                    <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
                         <div className="flex items-center gap-2">
-                            <span className="text-3xl">📅</span>
-                            <h1 className="text-2xl font-bold text-indigo-600">
+                            <ApplicationLogo className="text-accent h-8 w-8 fill-current" />
+                            <span className="text-headline text-content font-semibold">
                                 GroupSync Calendar
-                            </h1>
+                            </span>
                         </div>
-                        <div className="flex gap-4">
-                            <a
-                                href="/login"
-                                className="px-4 py-2 font-medium text-indigo-600 hover:text-indigo-800"
-                            >
-                                Login
-                            </a>
-                            <a
-                                href="/register"
-                                className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700"
-                            >
-                                Sign Up
-                            </a>
+                        <div className="flex items-center gap-2">
+                            {canLogin && (
+                                <LinkButton href="/login" variant="ghost">
+                                    Log in
+                                </LinkButton>
+                            )}
+                            {canRegister && (
+                                <LinkButton href="/register" variant="primary">
+                                    Sign up
+                                </LinkButton>
+                            )}
                         </div>
                     </div>
                 </nav>
 
-                {/* Hero Section */}
-                <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
                     <div className="mb-16 text-center">
-                        <h2 className="mb-6 text-5xl font-bold text-gray-900">
-                            Manage Group Calendars Effortlessly
-                        </h2>
-                        <p className="mx-auto mb-8 max-w-2xl text-xl text-gray-600">
-                            Coordinate with multiple groups, sync events in
-                            real-time, and never miss an important date again.
+                        <h1 className="text-largetitle text-content mb-6 font-bold">
+                            Manage group calendars effortlessly
+                        </h1>
+                        <p className="text-content-secondary text-body mx-auto mb-8 max-w-2xl">
+                            Coordinate with multiple groups, see who's busy at a
+                            glance, and never miss an important date again.
                         </p>
-                        <div className="flex justify-center gap-4">
-                            <a
-                                href="/register"
-                                className="rounded-lg bg-indigo-600 px-8 py-3 text-lg font-semibold text-white transition hover:bg-indigo-700"
-                            >
-                                Get Started
-                            </a>
-                            <a
+                        <div className="flex justify-center gap-3">
+                            {canRegister && (
+                                <LinkButton
+                                    href="/register"
+                                    variant="primary"
+                                    size="lg"
+                                >
+                                    Get started
+                                </LinkButton>
+                            )}
+                            <LinkButton
                                 href="#features"
-                                className="rounded-lg border-2 border-indigo-600 px-8 py-3 text-lg font-semibold text-indigo-600 transition hover:bg-indigo-50"
+                                variant="secondary"
+                                size="lg"
                             >
-                                Learn More
-                            </a>
+                                Learn more
+                            </LinkButton>
                         </div>
                     </div>
 
-                    {/* Features Section */}
                     <div
                         id="features"
-                        className="grid grid-cols-1 gap-8 py-16 md:grid-cols-2 lg:grid-cols-4"
+                        className="grid grid-cols-1 gap-6 py-16 md:grid-cols-2 lg:grid-cols-4"
                     >
-                        {/* Feature 1 */}
-                        <div className="rounded-lg bg-white p-8 shadow-lg transition hover:shadow-xl">
-                            <div className="mb-4 text-center text-4xl">📅</div>
-                            <h3 className="mb-2 text-center text-lg font-bold text-gray-900">
-                                Multiple Calendars
-                            </h3>
-                            <p className="text-center text-gray-600">
-                                Manage calendars for different groups all in one
-                                place
-                            </p>
-                        </div>
-
-                        {/* Feature 2 */}
-                        <div className="rounded-lg bg-white p-8 shadow-lg transition hover:shadow-xl">
-                            <div className="mb-4 text-center text-4xl">👥</div>
-                            <h3 className="mb-2 text-center text-lg font-bold text-gray-900">
-                                Group Management
-                            </h3>
-                            <p className="text-center text-gray-600">
-                                Create, organize, and manage multiple groups
-                                with ease
-                            </p>
-                        </div>
-
-                        {/* Feature 3 */}
-                        <div className="rounded-lg bg-white p-8 shadow-lg transition hover:shadow-xl">
-                            <div className="mb-4 text-center text-4xl">🔗</div>
-                            <h3 className="mb-2 text-center text-lg font-bold text-gray-900">
-                                Instant Sharing
-                            </h3>
-                            <p className="text-center text-gray-600">
-                                Share events and invite group members with one
-                                click
-                            </p>
-                        </div>
-
-                        {/* Feature 4 */}
-                        <div className="rounded-lg bg-white p-8 shadow-lg transition hover:shadow-xl">
-                            <div className="mb-4 text-center text-4xl">⚡</div>
-                            <h3 className="mb-2 text-center text-lg font-bold text-gray-900">
-                                Real-time Sync
-                            </h3>
-                            <p className="text-center text-gray-600">
-                                All events updated instantly across all group
-                                members
-                            </p>
-                        </div>
+                        {FEATURES.map(({ icon: Icon, title, description }) => (
+                            <Card key={title} material="thin">
+                                <Icon
+                                    aria-hidden="true"
+                                    className="text-accent mx-auto mb-4 size-8"
+                                />
+                                <h3 className="text-headline text-content mb-2 text-center">
+                                    {title}
+                                </h3>
+                                <p className="text-content-secondary text-footnote text-center">
+                                    {description}
+                                </p>
+                            </Card>
+                        ))}
                     </div>
 
-                    {/* CTA Section */}
-                    <div className="mt-16 rounded-lg bg-indigo-600 p-12 text-center shadow-lg">
-                        <h3 className="mb-4 text-3xl font-bold text-white">
+                    <Card
+                        material="thin"
+                        className="bg-accent-soft mt-16 text-center"
+                    >
+                        <h3 className="text-title2 text-content mb-4 font-semibold">
                             Ready to simplify your scheduling?
                         </h3>
-                        <p className="mb-8 text-lg text-indigo-100">
-                            Join thousands of teams staying organized with
-                            GroupSync Calendar
+                        <p className="text-content-secondary text-body mb-8">
+                            Join teams staying organized with GroupSync
+                            Calendar.
                         </p>
-                        <a
-                            href="/register"
-                            className="inline-block rounded-lg bg-white px-8 py-3 text-lg font-semibold text-indigo-600 transition hover:bg-gray-100"
-                        >
-                            Start Free Today
-                        </a>
-                    </div>
+                        {canRegister && (
+                            <LinkButton
+                                href="/register"
+                                variant="primary"
+                                size="lg"
+                            >
+                                Start free today
+                            </LinkButton>
+                        )}
+                    </Card>
                 </div>
 
-                {/* Footer */}
-                <footer className="mt-16 border-t border-gray-200 bg-white">
-                    <div className="mx-auto max-w-7xl px-4 py-8 text-center text-gray-600 sm:px-6 lg:px-8">
-                        <p>
-                            &copy; 2026 GroupSync Calendar. All rights reserved.
-                        </p>
+                <footer className="border-hairline border-t">
+                    <div className="text-content-tertiary text-footnote mx-auto max-w-6xl px-4 py-8 text-center sm:px-6 lg:px-8">
+                        &copy; 2026 GroupSync Calendar. All rights reserved.
                     </div>
                 </footer>
             </div>
