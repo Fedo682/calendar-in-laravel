@@ -11,16 +11,17 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Team busy-visibility, conflict scoping, the team-busy panel, and
-> member-to-admin messaging are implemented, tested, and passing all four
-> gates.** Spec: `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`.
-> Plan: `docs/superpowers/plans/2026-09-14-team-busy-visibility-and-messaging.md`
-> (all 9 tasks done). Branch: `phase/7-team-visibility-and-messaging`, stacked
-> on `phase/6-ui-conversion` (not on `dev` - `dev` does not yet contain that
-> branch's Dashboard/Events/Personal conversion this feature's frontend
-> builds on). Not yet merged or PR'd - both branches still need their own
-> checkpoint/PR, in order (`phase/6-ui-conversion` first, then this one
-> rebased onto the resulting `dev`).
+> **Next:** Task 7 of the paper UI conversion — the landing page (convert
+> `resources/js/pages/welcome.tsx`, add a `tests/Feature/WelcomeTest.php`
+> regression guard since none exists).
+>
+> Team busy-visibility, conflict scoping, the team-busy panel, and
+> member-to-admin messaging (spec: `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`,
+> plan: `docs/superpowers/plans/2026-09-14-team-busy-visibility-and-messaging.md`,
+> all 9 tasks done) **merged to `dev` via PR #11**, bringing Task 6 of the
+> paper UI conversion along with it (that PR was stacked on
+> `phase/6-ui-conversion`, which had never been merged on its own). Both
+> feature branches are deleted, locally and on origin.
 >
 > **One known gap, found while wiring the frontend:** the "Message" button's
 > `messagedIds` is local React state, so a "Messaged" row reverts to
@@ -36,9 +37,6 @@ so the state ships with the work rather than trailing it.
 > agenda row for a group event you can't edit, send a message, confirm the
 > dialog closes and the button reads "Messaged". Covered at the HTTP level
 > by `tests/Feature/EventMessageTest.php`, not yet clicked through by hand.
->
-> **After that branch is merged, resume the paper UI conversion plan at
-> Task 7 — the landing page.**
 >
 > **Two manual browser checks from the UI conversion plan are still
 > outstanding, neither performed** - no
@@ -63,9 +61,6 @@ so the state ships with the work rather than trailing it.
 > and now asks which occurrences first, matching the other two pages. Flagged
 > here in case that capability change wasn't wanted on the dashboard
 > specifically.
->
-> Branch: `phase/6-ui-conversion`, cut fresh from `dev` (Tasks 1-5 and the
-> paper theme are merged, so this branch no longer needs to stack on anything).
 
 ---
 
@@ -107,8 +102,10 @@ bridge is deleted and the conversion is fully done.
 | 5     | Design system foundation — tokens, materials, 22 primitives, `AppShell`, `/styleguide`.            |
 | —     | `fix/npm-lockfile`, `fix/calendars-overview-null-group`.                                           |
 | —     | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix.       |
+| 6     | Calendar page chrome — `Events/Index`, `Calendars/Personal`, `Dashboard`, `DayView` converted.     |
+| —     | Team busy-visibility, scoped conflict detection, team-busy panel, member-to-admin messaging.       |
 
-Test count at the last green run: **285 passing** (311 on `phase/7-team-visibility-and-messaging`, not yet merged).
+Test count at the last green run: **311 passing**.
 
 ---
 
