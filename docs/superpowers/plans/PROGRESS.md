@@ -11,7 +11,7 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next:** Task 1 of the paper UI conversion — auth pages and the guest layout.
+> **Next:** Task 2 of the paper UI conversion — Profile.
 >
 > Branch: `phase/6-ui-conversion`. **Stacked on
 > `feat/paper-theme-and-dashboard`, not on `dev`** — the conversion needs that
@@ -26,7 +26,7 @@ so the state ships with the work rather than trailing it.
 
 | #   | Task                                            | State           |
 | --- | ----------------------------------------------- | --------------- |
-| 1   | Auth pages and the guest layout                 | [ ] not started |
+| 1   | Auth pages and the guest layout                 | [x] done         |
 | 2   | Profile                                         | [ ] not started |
 | 3   | Groups                                          | [ ] not started |
 | 4   | Calendar list pages                             | [ ] not started |
