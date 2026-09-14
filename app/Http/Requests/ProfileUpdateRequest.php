@@ -26,6 +26,17 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
+            // 'sometimes' so a partial profile update (name and email only)
+            // leaves the stored preference alone rather than being rejected;
+            // 'required' still rejects an explicitly blank one. The column is
+            // NOT NULL with a default, so a user always has a timezone.
+            //
+            // 'timezone:all' accepts any IANA identifier PHP knows about,
+            // including the region-less ones (UTC) a browser can report.
+            'timezone' => ['sometimes', 'required', 'timezone:all'],
+            'week_starts_on' => ['integer', 'between:0,6'],
+            'time_format' => ['in:12h,24h'],
+            'theme' => ['in:system,light,dark'],
         ];
     }
 }

@@ -66,6 +66,12 @@ Route::middleware('auth')->group(function () {
     // USER PREFERENCES (timezone, appearance)
     // ===================================================================
 
+    // Timezone, week start and time format ride along on profile.update.
+    // The theme is separate so a toggle can persist it without resubmitting
+    // (and revalidating) the whole profile form.
+    Route::patch('/profile/appearance', [ProfileController::class, 'updateAppearance'])
+        ->name('profile.appearance');
+
     // ===================================================================
     // SETTINGS: ICS FEED TOKENS
     // ===================================================================

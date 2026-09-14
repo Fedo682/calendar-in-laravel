@@ -79,6 +79,26 @@ return [
 
         'ensure_pages_exist' => true,
 
+        // The installed inertia-laravel reads these two keys directly when it
+        // builds the testing view finder (ServiceProvider::register binds
+        // 'inertia.testing.view-finder' from them). Without them the finder is
+        // handed null and every assertInertia()->component(...) call dies with
+        // "FileViewFinder::__construct(): Argument #2 ($paths) must be of type
+        // array, null given". They mirror the 'pages' block above, which is
+        // the shape a later package release moves to.
+        'page_paths' => [
+            resource_path('js/pages'),
+        ],
+
+        'page_extensions' => [
+            'js',
+            'jsx',
+            'svelte',
+            'ts',
+            'tsx',
+            'vue',
+        ],
+
     ],
 
 ];
