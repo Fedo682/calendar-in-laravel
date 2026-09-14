@@ -61,6 +61,15 @@ class GroupPolicy
         return $user->roleInGroup($group) === 'admin';
     }
 
+    /**
+     * View this group's inbox of member-sent messages and conflict reports.
+     * Super Admins bypass via Gate::before.
+     */
+    public function viewMessages(User $user, Group $group): bool
+    {
+        return $user->roleInGroup($group) === 'admin';
+    }
+
     public function restore(User $user, Group $group): bool
     {
         return false;

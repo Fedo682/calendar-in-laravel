@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $occurrence_start
  * @property string $body
  * @property array<int, string>|null $conflicting_titles
+ * @property Carbon|null $resolved_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Event $event
@@ -27,7 +28,15 @@ class EventMessage extends Model
     /** @use HasFactory<EventMessageFactory> */
     use HasFactory;
 
-    protected $fillable = ['event_id', 'sender_id', 'type', 'occurrence_start', 'body', 'conflicting_titles'];
+    protected $fillable = [
+        'event_id',
+        'sender_id',
+        'type',
+        'occurrence_start',
+        'body',
+        'conflicting_titles',
+        'resolved_at',
+    ];
 
     protected function casts(): array
     {
@@ -35,7 +44,13 @@ class EventMessage extends Model
             'type' => EventMessageType::class,
             'occurrence_start' => 'datetime',
             'conflicting_titles' => 'array',
+            'resolved_at' => 'datetime',
         ];
+    }
+
+    public function isResolved(): bool
+    {
+        return $this->resolved_at !== null;
     }
 
     /**

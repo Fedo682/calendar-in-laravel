@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupMembershipController;
+use App\Http\Controllers\GroupMessageController;
 use App\Http\Controllers\PersonalCalendarController;
 use App\Http\Controllers\PersonalEventController;
 use App\Http\Controllers\ProfileController;
@@ -46,6 +47,13 @@ Route::middleware('auth')->group(function () {
         Route::post('members/bulk', [GroupMembershipController::class, 'bulkStore'])->name('members.bulk');
         Route::put('members/{user}', [GroupMembershipController::class, 'update'])->name('members.update');
         Route::delete('members/{user}', [GroupMembershipController::class, 'destroy'])->name('members.destroy');
+
+        // The admin inbox for member-sent messages and conflict reports.
+        // Not scopeBindings(): EventMessage has no group() relation, so the
+        // controller verifies {message} belongs to {group} itself, the same
+        // way {user} is verified against {group} above.
+        Route::get('messages', [GroupMessageController::class, 'index'])->name('messages.index');
+        Route::patch('messages/{message}', [GroupMessageController::class, 'update'])->name('messages.update');
     });
 
     Route::prefix('groups/{group}')->name('groups.')->scopeBindings()->group(function () {

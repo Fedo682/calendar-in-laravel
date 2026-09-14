@@ -12,13 +12,22 @@ so the state ships with the work rather than trailing it.
 ## Resume here
 
 > **The paper UI conversion plan is fully done - all 9 tasks complete, the
-> legacy bridge and pre-design-system primitives deleted.** This was the
-> last plan queued up; there is no automatic next task. See "Still to come"
-> below for what's next (ICS feed is now unblocked - Task 8 landed).
+> legacy bridge and pre-design-system primitives deleted.** Merged to `dev`
+> via PR #12 (branch was `phase/7-landing-page`, name stale - it ended up
+> carrying Tasks 7, 8 and 9). See "Still to come" below for what's next
+> (ICS feed is now unblocked - Task 8 landed).
 >
-> Branch: `phase/7-landing-page` (name is stale - it ended up carrying
-> Tasks 7, 8 and 9). Not yet merged or PR'd. All four gates green
-> (312 tests, pint, phpstan clean, build succeeds).
+> **A second, independent branch is queued up right behind it:
+> `feature/group-messages-inbox`**, cut from `dev` before PR #12 landed, so
+> it needed a rebase to pick up Tasks 7-9 before it could merge cleanly
+> (this file's own "Resume here" section was the only conflict - both
+> branches touched it independently). Adds an admin-facing "Messages" page
+> per group (`/groups/{group}/messages`) so a group admin can actually see
+> what `event_messages` rows the existing report-conflict/message-admin
+> actions were creating - split into "Messages" and "Reports", each event
+> redacted normally for the viewer, with a resolved/unresolved toggle and a
+> link into the event's calendar. All four gates green (317 tests). Not yet
+> merged.
 >
 > **Task 8 turned out to need more than its own file list said.** Its
 > plan only listed `lib/datetime.ts`, `MonthGrid.tsx`, `DayView.tsx`,
@@ -116,8 +125,9 @@ so the state ships with the work rather than trailing it.
 | —     | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix.       |
 | 6     | Calendar page chrome — `Events/Index`, `Calendars/Personal`, `Dashboard`, `DayView` converted.     |
 | —     | Team busy-visibility, scoped conflict detection, team-busy panel, member-to-admin messaging.       |
+| 7-9   | Landing page, viewer-timezone rendering (grid + write path), legacy bridge + primitives deleted.   |
 
-Test count at the last green run: **311 passing**.
+Test count at the last green run: **317 passing** (on `feature/group-messages-inbox`, not yet merged).
 
 ---
 
@@ -125,8 +135,8 @@ Test count at the last green run: **311 passing**.
 
 - **ICS feed** — per-user secret-token URL, `sabre/vobject` with real
   VTIMEZONE, ETag/304 caching, a "Subscribed devices" revoke list. Was
-  blocked on viewer timezone rendering; unblocked once `phase/7-landing-page`
-  (Task 8) merges to `dev`.
+  blocked on viewer timezone rendering; unblocked now that Task 8 is on
+  `dev`.
 - **Google two-way sync** — six incremental steps, OAuth through to the
   conflict audit UI. Against the REST API via the `Http` facade, because
   neither `google/apiclient` nor `laravel/socialite` supports Guzzle 8.
