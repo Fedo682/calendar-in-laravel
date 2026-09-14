@@ -1,11 +1,15 @@
 import EventPill from '@/components/Calendar/EventPill';
 import type { GridEvent } from '@/types/calendar';
+import { nowInZone, toViewerZone } from '@/lib/datetime';
+import { isSameDay, set } from 'date-fns';
 import { useEffect, useState } from 'react';
 
 interface DayViewProps {
     date: Date;
     /** All events for the calendar - this component filters to `date` itself. */
     events: GridEvent[];
+    /** The viewer's IANA zone - every hour boundary is drawn in this zone. */
+    timezone: string;
     onClose: () => void;
     onSlotClick?: (dateTime: Date) => void;
     onEventClick?: (event: GridEvent) => void;
@@ -19,14 +23,6 @@ interface PositionedEvent {
 
 const ROW_HEIGHT = 48; // px per hour
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
-function isSameDay(a: Date, b: Date): boolean {
-    return (
-        a.getFullYear() === b.getFullYear() &&
-        a.getMonth() === b.getMonth() &&
-        a.getDate() === b.getDate()
-    );
-}
 
 function hoursSinceMidnight(date: Date): number {
     return date.getHours() + date.getMinutes() / 60;
@@ -105,6 +101,7 @@ function hourLabel(hour: number): string {
 export default function DayView({
     date,
     events,
+    timezone,
     onClose,
     onSlotClick,
     onEventClick,
@@ -112,16 +109,16 @@ export default function DayView({
     // Ticks every minute rather than freezing at the offset computed on the
     // render that opened the view - otherwise the line stops representing
     // "now" the moment it's drawn.
-    const [now, setNow] = useState(() => new Date());
+    const [now, setNow] = useState(() => nowInZone(timezone));
 
     useEffect(() => {
-        const id = setInterval(() => setNow(new Date()), 60_000);
+        const id = setInterval(() => setNow(nowInZone(timezone)), 60_000);
 
         return () => clearInterval(id);
-    }, []);
+    }, [timezone]);
 
     const dayEvents = events.filter((event) =>
-        isSameDay(new Date(event.starts_at), date),
+        isSameDay(toViewerZone(event.starts_at, timezone), date),
     );
     const allDayEvents = dayEvents.filter((event) => event.all_day);
     const timedEvents = dayEvents.filter((event) => !event.all_day);
@@ -169,9 +166,14 @@ export default function DayView({
                             key={hour}
                             type="button"
                             onClick={() => {
-                                const slot = new Date(date);
-                                slot.setHours(hour, 0, 0, 0);
-                                onSlotClick?.(slot);
+                                onSlotClick?.(
+                                    set(date, {
+                                        hours: hour,
+                                        minutes: 0,
+                                        seconds: 0,
+                                        milliseconds: 0,
+                                    }),
+                                );
                             }}
                             className="border-hairline hover:bg-surface-raised absolute right-0 left-0 flex w-full items-start border-t text-left"
                             style={{
@@ -195,8 +197,8 @@ export default function DayView({
                     )}
 
                     {positioned.map(({ event, column, columnCount }) => {
-                        const start = new Date(event.starts_at);
-                        const end = new Date(event.ends_at);
+                        const start = toViewerZone(event.starts_at, timezone);
+                        const end = toViewerZone(event.ends_at, timezone);
                         const top = hoursSinceMidnight(start) * ROW_HEIGHT;
                         const height = Math.max(
                             20,

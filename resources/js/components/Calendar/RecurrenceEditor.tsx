@@ -1,3 +1,5 @@
+import { Field, Input, Select } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import { useMemo } from 'react';
 
 /**
@@ -35,9 +37,6 @@ const WEEKDAY_LABELS = [
 ];
 
 type Preset = 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
-
-const SELECT_CLASS =
-    'w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none';
 
 /** Which preset produced a rule, so reopening an event shows what it is. */
 function presetFor(rule: string): Preset {
@@ -176,41 +175,36 @@ export default function RecurrenceEditor({
     };
 
     return (
-        <div>
-            <label
-                htmlFor="recurrence_preset"
-                className="mb-1 block text-sm font-medium text-gray-700"
-            >
-                Repeats
-            </label>
-
-            <select
-                id="recurrence_preset"
-                value={preset}
-                onChange={(e) => applyPreset(e.target.value as Preset)}
-                className={SELECT_CLASS}
-            >
-                <option value="never">Does not repeat</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-                <option value="custom">Custom...</option>
-            </select>
+        <div className="space-y-2">
+            <Field label="Repeats">
+                <Select
+                    id="recurrence_preset"
+                    value={preset}
+                    onChange={(e) => applyPreset(e.target.value as Preset)}
+                >
+                    <option value="never">Does not repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                    <option value="custom">Custom...</option>
+                </Select>
+            </Field>
 
             {preset === 'weekly' && (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1">
                     {WEEKDAY_CODES.map((code, index) => (
                         <button
                             key={code}
                             type="button"
                             onClick={() => toggleDay(code)}
                             aria-pressed={days.includes(code)}
-                            className={`rounded-md border px-2 py-1 text-xs font-medium transition ${
+                            className={cn(
+                                'rounded-control ease-hig duration-fast text-caption1 border px-2 py-1 font-medium transition',
                                 days.includes(code)
-                                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                            }`}
+                                    ? 'border-accent/40 bg-accent-soft text-accent'
+                                    : 'border-hairline text-content-secondary hover:bg-surface-raised',
+                            )}
                         >
                             {WEEKDAY_LABELS[index].slice(0, 3)}
                         </button>
@@ -219,47 +213,38 @@ export default function RecurrenceEditor({
             )}
 
             {preset === 'custom' && (
-                <input
+                <Input
                     type="text"
                     value={value}
                     onChange={(e) => onChange(e.target.value.toUpperCase())}
                     placeholder="FREQ=WEEKLY;INTERVAL=2;BYDAY=MO"
-                    className={`${SELECT_CLASS} mt-2 font-mono text-xs`}
+                    className="text-caption1 font-mono"
                 />
             )}
 
             {value !== '' && (
                 <>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="text-content-secondary text-footnote">
                         {describeRule(value, timezone)}
                     </p>
 
-                    <label
-                        htmlFor="recurrence_timezone"
-                        className="mt-2 mb-1 block text-sm font-medium text-gray-700"
-                    >
-                        Repeats in timezone
-                    </label>
-                    <input
-                        id="recurrence_timezone"
-                        type="text"
-                        value={timezone}
-                        onChange={(e) => onTimezoneChange(e.target.value)}
-                        className={SELECT_CLASS}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <Field label="Repeats in timezone" error={timezoneError}>
+                        <Input
+                            id="recurrence_timezone"
+                            type="text"
+                            value={timezone}
+                            onChange={(e) => onTimezoneChange(e.target.value)}
+                            invalid={Boolean(timezoneError)}
+                        />
+                    </Field>
+                    <p className="text-content-tertiary text-caption1">
                         A 9am series stays at 9am here even when the clocks
                         change.
                     </p>
-                    {timezoneError && (
-                        <p className="mt-1 text-sm text-red-500">
-                            {timezoneError}
-                        </p>
-                    )}
                 </>
             )}
 
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+            {error && <p className="text-danger text-footnote">{error}</p>}
         </div>
     );
 }

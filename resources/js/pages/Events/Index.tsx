@@ -4,11 +4,16 @@ import { Badge, Button } from '@/components/ui';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
-import { useEventForm } from '@/components/Calendar/useEventForm';
+import {
+    useEventForm,
+    withUtcOffsets,
+} from '@/components/Calendar/useEventForm';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import { nowInZone } from '@/lib/datetime';
 import type { CalendarEvent, Occurrence } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
 import { Head, Link } from '@inertiajs/react';
+import { TZDate } from '@date-fns/tz';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
@@ -48,7 +53,11 @@ export default function EventsIndex({
     occurrences,
     can_manage,
 }: Props) {
-    const [month, setMonth] = useState<Date>(new Date());
+    const { viewer } = usePageProps<Props>();
+    const timezone = viewer.timezone;
+    const weekStartsOn = viewer.week_starts_on;
+
+    const [month, setMonth] = useState<Date>(() => nowInZone(timezone));
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
     const [editingEvent, setEditingEvent] = useState<Occurrence | null>(null);
@@ -56,7 +65,7 @@ export default function EventsIndex({
         null,
     );
 
-    const { form, openCreate, openEdit, reset } = useEventForm();
+    const { form, openCreate, openEdit, reset } = useEventForm(timezone);
 
     const closeDialog = () => {
         setDialogMode(null);
@@ -109,7 +118,10 @@ export default function EventsIndex({
 
         // transform() mutates the form rather than returning it, so the scope
         // is applied and then reset once the request has been sent.
-        form.transform((data) => ({ ...data, scope }));
+        form.transform((data) => ({
+            ...withUtcOffsets(data, timezone),
+            scope,
+        }));
 
         form.put(eventUrl(group, calendar, editingEvent.event_id), {
             preserveScroll: true,
@@ -151,9 +163,12 @@ export default function EventsIndex({
             return;
         }
 
+        form.transform((data) => withUtcOffsets(data, timezone));
+
         form.post(eventsIndexUrl(group, calendar), {
             preserveScroll: true,
             onSuccess: () => closeDialog(),
+            onFinish: () => form.transform((data) => data),
         });
     };
 
@@ -176,10 +191,14 @@ export default function EventsIndex({
     };
 
     const goToPrevMonth = () =>
-        setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+        setMonth(
+            (m) => new TZDate(m.getFullYear(), m.getMonth() - 1, 1, timezone),
+        );
     const goToNextMonth = () =>
-        setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
-    const goToToday = () => setMonth(new Date());
+        setMonth(
+            (m) => new TZDate(m.getFullYear(), m.getMonth() + 1, 1, timezone),
+        );
+    const goToToday = () => setMonth(nowInZone(timezone));
 
     const monthLabel = month.toLocaleDateString(undefined, {
         month: 'long',
@@ -195,6 +214,7 @@ export default function EventsIndex({
                     <DayView
                         date={selectedDay}
                         events={occurrences}
+                        timezone={timezone}
                         onClose={() => setSelectedDay(null)}
                         onSlotClick={can_manage ? openCreateDialog : undefined}
                         onEventClick={openEditDialog}
@@ -231,6 +251,8 @@ export default function EventsIndex({
                         <MonthGrid
                             month={month}
                             events={occurrences}
+                            timezone={timezone}
+                            weekStartsOn={weekStartsOn}
                             onDayClick={(date) => setSelectedDay(date)}
                             onEventClick={openEditDialog}
                         />

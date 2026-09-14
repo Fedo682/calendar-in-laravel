@@ -4,10 +4,16 @@ import { Button, Card } from '@/components/ui';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
-import { useEventForm } from '@/components/Calendar/useEventForm';
+import {
+    useEventForm,
+    withUtcOffsets,
+} from '@/components/Calendar/useEventForm';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import { nowInZone } from '@/lib/datetime';
 import type { CalendarEvent, Occurrence } from '@/types/calendar';
+import { usePageProps } from '@/types/shared';
 import { Head } from '@inertiajs/react';
+import { TZDate } from '@date-fns/tz';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
@@ -28,7 +34,11 @@ interface Props {
 type DialogMode = 'create' | 'edit';
 
 export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
-    const [month, setMonth] = useState<Date>(new Date());
+    const { viewer } = usePageProps<Props>();
+    const timezone = viewer.timezone;
+    const weekStartsOn = viewer.week_starts_on;
+
+    const [month, setMonth] = useState<Date>(() => nowInZone(timezone));
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
     const [editingEvent, setEditingEvent] = useState<Occurrence | null>(null);
@@ -38,7 +48,7 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
 
     // Anything on a personal calendar is private unless its owner says
     // otherwise; the server applies the same default if this is omitted.
-    const { form, openCreate, openEdit, reset } = useEventForm({
+    const { form, openCreate, openEdit, reset } = useEventForm(timezone, {
         visibility: 'private',
     });
 
@@ -74,7 +84,10 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
 
         // transform() mutates the form rather than returning it, so the scope
         // is applied and then reset once the request has been sent.
-        form.transform((data) => ({ ...data, scope }));
+        form.transform((data) => ({
+            ...withUtcOffsets(data, timezone),
+            scope,
+        }));
 
         form.put(`/calendars/personal/events/${editingEvent.event_id}`, {
             preserveScroll: true,
@@ -116,9 +129,12 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
             return;
         }
 
+        form.transform((data) => withUtcOffsets(data, timezone));
+
         form.post('/calendars/personal/events', {
             preserveScroll: true,
             onSuccess: () => closeDialog(),
+            onFinish: () => form.transform((data) => data),
         });
     };
 
@@ -140,7 +156,12 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
     const shiftMonth = (delta: number) =>
         setMonth(
             (current) =>
-                new Date(current.getFullYear(), current.getMonth() + delta, 1),
+                new TZDate(
+                    current.getFullYear(),
+                    current.getMonth() + delta,
+                    1,
+                    timezone,
+                ),
         );
 
     return (
@@ -168,7 +189,7 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
                         </Button>
                         <Button
                             variant="ghost"
-                            onClick={() => setMonth(new Date())}
+                            onClick={() => setMonth(nowInZone(timezone))}
                         >
                             Today
                         </Button>
@@ -190,7 +211,7 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
 
                     <Button
                         icon={Plus}
-                        onClick={() => openCreateDialog(new Date())}
+                        onClick={() => openCreateDialog(nowInZone(timezone))}
                     >
                         New event
                     </Button>
@@ -199,6 +220,8 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
                 <MonthGrid
                     month={month}
                     events={occurrences}
+                    timezone={timezone}
+                    weekStartsOn={weekStartsOn}
                     onDayClick={(date) => setSelectedDay(date)}
                     onEventClick={openEditDialog}
                 />
@@ -208,6 +231,7 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
                         <DayView
                             date={selectedDay}
                             events={occurrences}
+                            timezone={timezone}
                             onClose={() => setSelectedDay(null)}
                             onSlotClick={openCreateDialog}
                             onEventClick={openEditDialog}
