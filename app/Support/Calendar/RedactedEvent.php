@@ -35,7 +35,46 @@ final readonly class RedactedEvent
         public string $calendarName,
         public ?string $calendarColor,
         public ?string $groupName,
+        /**
+         * Recurrence travels through redaction intact.
+         *
+         * A rule says when something repeats, never what it is, so there is
+         * nothing here to withhold - and both consumers need it unredacted:
+         * the expander has to produce the right instants for a series whose
+         * title the viewer may not read, and the ICS feed has to emit one
+         * VEVENT carrying the RRULE instead of hundreds of expanded copies.
+         */
+        public ?string $recurrenceRule = null,
+        public ?string $recurrenceTimezone = null,
+        /** @var list<string> UTC ISO-8601 instants excluded from the series. */
+        public array $recurrenceExdates = [],
+        /** @var list<string> UTC ISO-8601 instants added to the series. */
+        public array $recurrenceRdates = [],
+        public ?int $recurrenceParentId = null,
+        /** Set on an override row: the original start it stands in for. */
+        public ?CarbonImmutable $recurrenceInstanceId = null,
     ) {}
+
+    /**
+     * Whether this row is the master of a series, rather than a one-off event
+     * or an override standing in for a single instance.
+     */
+    public function isRecurring(): bool
+    {
+        return $this->recurrenceRule !== null && $this->recurrenceRule !== '';
+    }
+
+    /**
+     * How long one instance of this event lasts, in seconds.
+     *
+     * Every occurrence in a series inherits it: the rule generates starts and
+     * the end is always the same distance away. Per-occurrence ends are the
+     * alternative, and they go stale the moment the master's duration changes.
+     */
+    public function durationSeconds(): int
+    {
+        return $this->endsAt->getTimestamp() - $this->startsAt->getTimestamp();
+    }
 
     /**
      * A stable iCalendar UID.

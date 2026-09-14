@@ -1,5 +1,8 @@
 import DayView from '@/components/Calendar/DayView';
 import MonthGrid from '@/components/Calendar/MonthGrid';
+import RecurrenceEditor from '@/components/Calendar/RecurrenceEditor';
+import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
+import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { CalendarEvent, Occurrence, Visibility } from '@/types/calendar';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
@@ -30,6 +33,10 @@ interface EventFormData {
     ends_at: string;
     all_day: boolean;
     visibility: Visibility;
+    recurrence_rule: string;
+    recurrence_timezone: string;
+    scope: RecurrenceScope;
+    occurrence_start: string;
 }
 
 /** Format a Date as the value expected by <input type="datetime-local">. */
@@ -44,6 +51,9 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
     const [editingEvent, setEditingEvent] = useState<Occurrence | null>(null);
+    const [scopePrompt, setScopePrompt] = useState<'save' | 'delete' | null>(
+        null,
+    );
 
     const form = useForm<EventFormData>({
         title: '',
@@ -55,6 +65,10 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
         // Anything on a personal calendar is private unless its owner says
         // otherwise; the server applies the same default if this is omitted.
         visibility: 'private',
+        recurrence_rule: '',
+        recurrence_timezone: '',
+        scope: 'all',
+        occurrence_start: '',
     });
 
     const closeDialog = () => {
@@ -84,6 +98,10 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
             ends_at: toLocalInputValue(end),
             all_day: false,
             visibility: 'private',
+            recurrence_rule: '',
+            recurrence_timezone: '',
+            scope: 'all',
+            occurrence_start: '',
         });
         setEditingEvent(null);
         setDialogMode('create');
@@ -104,19 +122,61 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
             ends_at: toLocalInputValue(new Date(full.ends_at)),
             all_day: full.all_day,
             visibility: full.visibility,
+            recurrence_rule: full.recurrence_rule ?? '',
+            recurrence_timezone: full.recurrence_timezone ?? '',
+            scope: 'all',
+            occurrence_start: full.recurrence_id ?? full.starts_at,
         });
         setEditingEvent(full);
         setDialogMode('edit');
+    };
+
+    const needsScope =
+        dialogMode === 'edit' && (editingEvent?.is_recurring ?? false);
+
+    const saveWithScope = (scope: RecurrenceScope) => {
+        if (!editingEvent) return;
+
+        // transform() mutates the form rather than returning it, so the scope
+        // is applied and then reset once the request has been sent.
+        form.transform((data) => ({ ...data, scope }));
+
+        form.put(`/calendars/personal/events/${editingEvent.event_id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setScopePrompt(null);
+                closeDialog();
+            },
+            onFinish: () => form.transform((data) => data),
+        });
+    };
+
+    const deleteWithScope = (scope: RecurrenceScope) => {
+        if (!editingEvent) return;
+
+        form.transform((data) => ({ ...data, scope }));
+
+        form.delete(`/calendars/personal/events/${editingEvent.event_id}`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setScopePrompt(null);
+                closeDialog();
+            },
+            onFinish: () => form.transform((data) => data),
+        });
     };
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
 
         if (dialogMode === 'edit' && editingEvent) {
-            form.put(`/calendars/personal/events/${editingEvent.event_id}`, {
-                preserveScroll: true,
-                onSuccess: () => closeDialog(),
-            });
+            if (needsScope) {
+                setScopePrompt('save');
+
+                return;
+            }
+
+            saveWithScope('all');
 
             return;
         }
@@ -129,13 +189,17 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
 
     const destroy = () => {
         if (!editingEvent) return;
+
+        if (needsScope) {
+            setScopePrompt('delete');
+
+            return;
+        }
+
         if (!window.confirm('Delete this event? This cannot be undone.'))
             return;
 
-        form.delete(`/calendars/personal/events/${editingEvent.event_id}`, {
-            preserveScroll: true,
-            onSuccess: () => closeDialog(),
-        });
+        deleteWithScope('all');
     };
 
     const shiftMonth = (delta: number) =>
@@ -359,6 +423,20 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
                                 </div>
                             </div>
 
+                            <RecurrenceEditor
+                                value={form.data.recurrence_rule}
+                                onChange={(rule) =>
+                                    form.setData('recurrence_rule', rule)
+                                }
+                                startsAt={form.data.starts_at}
+                                timezone={form.data.recurrence_timezone}
+                                onTimezoneChange={(tz) =>
+                                    form.setData('recurrence_timezone', tz)
+                                }
+                                error={form.errors.recurrence_rule}
+                                timezoneError={form.errors.recurrence_timezone}
+                            />
+
                             <div>
                                 <label
                                     htmlFor="personal_visibility"
@@ -425,6 +503,18 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
                     </DialogPanel>
                 </div>
             </Dialog>
+
+            <RecurrenceScopeDialog
+                open={scopePrompt !== null}
+                action={scopePrompt ?? 'save'}
+                processing={form.processing}
+                onCancel={() => setScopePrompt(null)}
+                onConfirm={(scope) =>
+                    scopePrompt === 'delete'
+                        ? deleteWithScope(scope)
+                        : saveWithScope(scope)
+                }
+            />
         </>
     );
 }

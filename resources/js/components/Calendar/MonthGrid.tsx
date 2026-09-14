@@ -1,9 +1,9 @@
-import type { CalendarEvent } from '@/types/calendar';
+import type { CalendarEvent, GridEvent } from '@/types/calendar';
 
 interface MonthGridProps {
     /** Any date within the month to display. */
     month: Date;
-    events: CalendarEvent[];
+    events: GridEvent[];
     onDayClick?: (date: Date) => void;
     onEventClick?: (event: CalendarEvent) => void;
 }
@@ -83,7 +83,7 @@ export default function MonthGrid({
                             <div className="mt-1 space-y-0.5">
                                 {dayEvents.slice(0, 3).map((event) => (
                                     <div
-                                        key={event.id}
+                                        key={event.key}
                                         role="button"
                                         tabIndex={0}
                                         onClick={(e) => {

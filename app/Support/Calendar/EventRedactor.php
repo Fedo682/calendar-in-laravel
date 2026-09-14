@@ -71,6 +71,19 @@ final class EventRedactor
             calendarName: $calendar->name,
             calendarColor: $calendar->color,
             groupName: $calendar->group?->name,
+            // Recurrence is carried through unredacted on purpose. A rule
+            // describes cadence, not content: "every Monday at 09:00" is
+            // already implied by the busy blocks a viewer can see, so
+            // withholding it would hide nothing while breaking expansion for
+            // exactly the events that most need it.
+            recurrenceRule: $event->recurrence_rule,
+            recurrenceTimezone: $event->recurrence_timezone,
+            recurrenceExdates: $event->recurrence_exdates ?? [],
+            recurrenceRdates: $event->recurrence_rdates ?? [],
+            recurrenceParentId: $event->recurrence_parent_id,
+            recurrenceInstanceId: $event->recurrence_id === null
+                ? null
+                : CarbonImmutable::parse($event->recurrence_id)->utc(),
         );
     }
 

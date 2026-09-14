@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\EventVisibility;
 use App\Models\Calendar;
+use App\Rules\ValidRRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,17 @@ class StoreEventRequest extends FormRequest
             'ends_at' => ['required', 'date', 'after_or_equal:starts_at'],
             'all_day' => ['boolean'],
             'visibility' => ['sometimes', Rule::enum(EventVisibility::class)],
+            // Stored raw. The allowlist inside ValidRRule is what keeps the
+            // corpus inside what the ICS feed and Google's recurrence[] array
+            // can both round-trip, and what refuses an expansion bomb at the
+            // door rather than truncating it silently later.
+            'recurrence_rule' => ['nullable', 'string', 'max:512', new ValidRRule],
+            // Mandatory for anything recurring, and the reason DST works. A
+            // rule anchored at 09:00 Europe/Berlin has to stay at 09:00 when
+            // the offset changes, which cannot be recovered from a UTC
+            // instant alone - so a rule without a zone is rejected rather
+            // than defaulted.
+            'recurrence_timezone' => ['nullable', 'required_with:recurrence_rule', 'string', 'timezone'],
         ];
     }
 

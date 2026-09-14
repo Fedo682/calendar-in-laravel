@@ -1,11 +1,17 @@
 <?php
 
+use App\Enums\EventVisibility;
 use App\Enums\RoleName;
 use App\Models\Group;
 use App\Models\GroupUser;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Calendar\Occurrence;
+use App\Support\Calendar\RecurrenceExpander;
+use App\Support\Calendar\RedactedEvent;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 /*
@@ -102,4 +108,92 @@ function asSuperAdmin(?User $user = null): User
     ]);
 
     return $user->refresh();
+}
+
+/**
+ * A recurring master as a value object, anchored by a wall-clock time in a
+ * named zone.
+ *
+ * $localStart is written the way a person would say it - "09:00 in Berlin" -
+ * and converted here, so a test asserting 09:00 local never hand-computes a
+ * UTC offset and so cannot quietly encode the very mistake it is checking
+ * for.
+ *
+ * Lives here rather than in one of the recurrence test files because three of
+ * them need it, and a test file that declares a global function cannot be
+ * loaded alongside another declaring the same one.
+ *
+ * @param  list<string>  $exdates
+ * @param  list<string>  $rdates
+ */
+function recurringMaster(
+    string $localStart,
+    string $timezone,
+    ?string $rule,
+    int $durationMinutes = 60,
+    array $exdates = [],
+    array $rdates = [],
+    int $id = 1,
+    string $title = 'Standup',
+): RedactedEvent {
+    $startsAt = CarbonImmutable::parse($localStart, $timezone)->utc();
+
+    return new RedactedEvent(
+        id: $id,
+        calendarId: 1,
+        groupId: 1,
+        title: $title,
+        description: null,
+        location: null,
+        startsAt: $startsAt,
+        endsAt: $startsAt->addMinutes($durationMinutes),
+        allDay: false,
+        visibility: EventVisibility::Public,
+        isRedacted: false,
+        canEdit: true,
+        createdBy: 1,
+        calendarName: 'Team',
+        calendarColor: null,
+        groupName: 'Acme',
+        recurrenceRule: $rule,
+        recurrenceTimezone: $rule === null ? null : $timezone,
+        recurrenceExdates: $exdates,
+        recurrenceRdates: $rdates,
+    );
+}
+
+/**
+ * Expand a series over a window expressed in $timezone.
+ *
+ * @param  Collection<int, RedactedEvent>|null  $overrides
+ * @return list<Occurrence>
+ */
+function expandSeries(
+    RedactedEvent $master,
+    string $from,
+    string $to,
+    string $timezone = 'UTC',
+    ?Collection $overrides = null,
+): array {
+    return app(RecurrenceExpander::class)->expand(
+        $master,
+        CarbonImmutable::parse($from, $timezone)->utc(),
+        CarbonImmutable::parse($to, $timezone)->utc(),
+        $overrides ?? collect(),
+    );
+}
+
+/**
+ * The local wall-clock start of each occurrence, which is the form these
+ * assertions are actually about.
+ *
+ * @param  list<Occurrence>  $occurrences
+ * @return list<string>
+ */
+function localStarts(array $occurrences, string $timezone): array
+{
+    return array_map(
+        fn (Occurrence $o) => $o->startsAt->setTimezone($timezone)->format('Y-m-d H:i'),
+        $occurrences,
+    );
 }

@@ -78,6 +78,12 @@ final readonly class Occurrence implements Arrayable
             'is_redacted' => $this->event->isRedacted,
             'can_edit' => $this->event->canEdit,
             'recurrence_id' => $this->recurrenceId?->toIso8601String(),
+            // The rule itself, so opening an occurrence for edit can show
+            // what the series does without a second request. Null on a
+            // one-off, and on an override, which is a row in its own right.
+            'recurrence_rule' => $this->event->recurrenceRule,
+            'recurrence_timezone' => $this->event->recurrenceTimezone,
+            'is_recurring' => $this->event->isRecurring(),
             'calendar_name' => $this->event->calendarName,
             'calendar_color' => $this->event->calendarColor,
             'group_name' => $this->event->groupName,

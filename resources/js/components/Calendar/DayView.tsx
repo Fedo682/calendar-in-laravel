@@ -1,16 +1,16 @@
-import type { CalendarEvent } from '@/types/calendar';
+import type { CalendarEvent, GridEvent } from '@/types/calendar';
 
 interface DayViewProps {
     date: Date;
     /** All events for the calendar - this component filters to `date` itself. */
-    events: CalendarEvent[];
+    events: GridEvent[];
     onClose: () => void;
     onSlotClick?: (dateTime: Date) => void;
     onEventClick?: (event: CalendarEvent) => void;
 }
 
 interface PositionedEvent {
-    event: CalendarEvent;
+    event: GridEvent;
     column: number;
     columnCount: number;
 }
@@ -37,20 +37,20 @@ function hoursSinceMidnight(date: Date): number {
  * events that do overlap end up side by side, sharing the row width evenly
  * with only the events they actually conflict with.
  */
-function layoutDayEvents(events: CalendarEvent[]): PositionedEvent[] {
+function layoutDayEvents(events: GridEvent[]): PositionedEvent[] {
     const sorted = [...events].sort(
         (a, b) =>
             new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
     );
 
     const positioned: PositionedEvent[] = [];
-    let cluster: CalendarEvent[] = [];
+    let cluster: GridEvent[] = [];
     let clusterEnd = -Infinity;
 
     const flushCluster = () => {
         if (cluster.length === 0) return;
 
-        const columns: CalendarEvent[][] = [];
+        const columns: GridEvent[][] = [];
         for (const event of cluster) {
             const start = new Date(event.starts_at).getTime();
             let placedInColumn = columns.find(
@@ -131,7 +131,7 @@ export default function DayView({
                 <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-2">
                     {allDayEvents.map((event) => (
                         <button
-                            key={event.id}
+                            key={event.key}
                             type="button"
                             onClick={() => onEventClick?.(event)}
                             className="rounded bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-200"
@@ -195,7 +195,7 @@ export default function DayView({
 
                         return (
                             <button
-                                key={event.id}
+                                key={event.key}
                                 type="button"
                                 onClick={(e) => {
                                     e.stopPropagation();
