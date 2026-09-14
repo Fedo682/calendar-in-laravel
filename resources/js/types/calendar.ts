@@ -18,7 +18,13 @@ export interface GroupSummary {
 export interface CalendarSummary {
     id: number;
     name: string;
+    description: string | null;
     color: string | null;
+    /**
+     * Null for a personal calendar, which belongs to one user rather than to
+     * a group. Anything rendering a calendar has to handle that - a personal
+     * calendar has no group to name and no group-nested route to link to.
+     */
     group: GroupSummary | null;
 }
 

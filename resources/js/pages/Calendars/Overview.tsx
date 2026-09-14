@@ -1,22 +1,22 @@
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
+import type { CalendarSummary } from '@/types/calendar';
 import { Head, Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 
-interface Group {
-    id: number;
-    name: string;
-}
-
-interface Calendar {
-    id: number;
-    name: string;
-    description: string | null;
-    color: string | null;
-    group: Group;
-}
-
 interface Props {
-    calendars: Calendar[];
+    calendars: CalendarSummary[];
+}
+
+/**
+ * Where a calendar lives.
+ *
+ * A personal calendar belongs to one user and has no group, so there is no
+ * group-nested route to send them to - it has its own flat one.
+ */
+function calendarHref(calendar: CalendarSummary): string {
+    return calendar.group === null
+        ? '/calendars/personal'
+        : `/groups/${calendar.group.id}/calendars/${calendar.id}`;
 }
 
 export default function CalendarsOverview({ calendars }: Props) {
@@ -27,7 +27,8 @@ export default function CalendarsOverview({ calendars }: Props) {
             <div className="py-8">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <p className="mb-6 text-sm text-gray-500">
-                        Every calendar across the groups you belong to.
+                        Your own calendar, and every calendar across the groups
+                        you belong to.
                     </p>
 
                     {calendars.length > 0 ? (
@@ -36,7 +37,7 @@ export default function CalendarsOverview({ calendars }: Props) {
                                 {calendars.map((calendar) => (
                                     <li key={calendar.id}>
                                         <Link
-                                            href={`/groups/${calendar.group.id}/calendars/${calendar.id}`}
+                                            href={calendarHref(calendar)}
                                             className="flex items-center justify-between gap-4 px-6 py-4 transition hover:bg-gray-50"
                                         >
                                             <div className="flex min-w-0 items-center gap-3">
@@ -59,7 +60,8 @@ export default function CalendarsOverview({ calendars }: Props) {
                                                 </div>
                                             </div>
                                             <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                                                {calendar.group.name}
+                                                {calendar.group?.name ??
+                                                    'Personal'}
                                             </span>
                                         </Link>
                                     </li>
