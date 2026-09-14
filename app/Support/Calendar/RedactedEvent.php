@@ -53,6 +53,14 @@ final readonly class RedactedEvent
         public ?int $recurrenceParentId = null,
         /** Set on an override row: the original start it stands in for. */
         public ?CarbonImmutable $recurrenceInstanceId = null,
+        /**
+         * The personal calendar's owner's display name, set only when this
+         * event is both on a personal calendar and redacted for this
+         * viewer. Gives a "Busy" block an identity ("Busy - Jane Smith")
+         * without ever revealing anything about a redacted GROUP event's
+         * creator, which EventRedactor has never disclosed.
+         */
+        public ?string $ownerName = null,
     ) {}
 
     /**
