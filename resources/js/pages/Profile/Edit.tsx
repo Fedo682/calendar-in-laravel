@@ -1,3 +1,4 @@
+import { Card } from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
@@ -21,25 +22,22 @@ export default function Edit({
         <>
             <Head title="Profile" />
 
-            <div className="py-12">
-                <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdateProfileInformationForm
-                            mustVerifyEmail={mustVerifyEmail}
-                            status={status}
-                            timezoneOptions={timezoneOptions}
-                            className="max-w-xl"
-                        />
-                    </div>
+            <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+                <Card material="thin">
+                    <UpdateProfileInformationForm
+                        mustVerifyEmail={mustVerifyEmail}
+                        status={status}
+                        timezoneOptions={timezoneOptions}
+                    />
+                </Card>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <UpdatePasswordForm className="max-w-xl" />
-                    </div>
+                <Card material="thin">
+                    <UpdatePasswordForm />
+                </Card>
 
-                    <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                        <DeleteUserForm className="max-w-xl" />
-                    </div>
-                </div>
+                <Card material="thin">
+                    <DeleteUserForm />
+                </Card>
             </div>
         </>
     );
@@ -47,11 +45,7 @@ export default function Edit({
 
 Edit.layout = (page: ReactNode) => (
     <AuthenticatedLayout
-        header={
-            <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                Profile
-            </h2>
-        }
+        header={<h2 className="text-headline text-chrome-content">Profile</h2>}
     >
         {page}
     </AuthenticatedLayout>

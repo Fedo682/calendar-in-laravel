@@ -1,10 +1,21 @@
+import {
+    Button,
+    Card,
+    ColorSwatchPicker,
+    EmptyState,
+    Field,
+    Input,
+    LinkButton,
+    Modal,
+    Textarea,
+} from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { GroupSummary } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { CalendarDays, Plus, Trash2 } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 type Group = GroupSummary;
 
@@ -34,10 +45,9 @@ export default function CalendarsIndex({
     calendars,
     can_manage,
 }: Props) {
-    const { flash } = usePageProps();
-    const [showToast, setShowToast] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editing, setEditing] = useState<Calendar | null>(null);
+    const [deleting, setDeleting] = useState<Calendar | null>(null);
 
     const { data, setData, post, put, processing, errors, reset, clearErrors } =
         useForm<CalendarFormData>({
@@ -45,14 +55,6 @@ export default function CalendarsIndex({
             description: '',
             color: '',
         });
-
-    useEffect(() => {
-        if (flash?.success) {
-            setShowToast(true);
-            const timer = setTimeout(() => setShowToast(false), 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [flash]);
 
     function openCreateDialog() {
         setEditing(null);
@@ -95,238 +97,188 @@ export default function CalendarsIndex({
         }
     }
 
-    function handleDelete(calendar: Calendar) {
-        if (
-            confirm(
-                `Delete calendar "${calendar.name}"? This cannot be undone.`,
-            )
-        ) {
-            router.delete(`/groups/${group.id}/calendars/${calendar.id}`, {
-                preserveScroll: true,
-            });
-        }
+    function confirmDelete() {
+        if (!deleting) return;
+
+        router.delete(`/groups/${group.id}/calendars/${deleting.id}`, {
+            preserveScroll: true,
+            onSuccess: () => setDeleting(null),
+        });
     }
 
     return (
         <>
             <Head title={`${group.name} - Calendars`} />
 
-            {showToast && (
-                <div className="fixed top-4 right-4 z-50 rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800 shadow-lg">
-                    {flash?.success}
-                </div>
-            )}
-
-            <div className="py-8">
-                <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div className="mb-6 flex items-center justify-between">
-                        <p className="text-sm text-gray-500">
-                            Calendars belonging to this group.
-                        </p>
-                        {can_manage && (
-                            <button
-                                onClick={openCreateDialog}
-                                className="inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
-                            >
-                                New Calendar
-                            </button>
-                        )}
-                    </div>
-
-                    {calendars.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {calendars.map((calendar) => (
-                                <div
-                                    key={calendar.id}
-                                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:border-gray-300 hover:shadow-md"
-                                >
-                                    <div className="mb-2 flex items-center gap-2">
-                                        <span
-                                            className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                            style={{
-                                                backgroundColor:
-                                                    calendar.color || '#6366f1',
-                                            }}
-                                        />
-                                        <h3 className="text-base font-semibold text-gray-900">
-                                            {calendar.name}
-                                        </h3>
-                                    </div>
-                                    <p className="mb-4 min-h-10 text-sm text-gray-500">
-                                        {calendar.description ||
-                                            'No description'}
-                                    </p>
-                                    <div className="flex gap-2">
-                                        <a
-                                            href={`/groups/${group.id}/calendars/${calendar.id}`}
-                                            className="flex-1 rounded-md bg-gray-800 px-3 py-1.5 text-center text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
-                                        >
-                                            View
-                                        </a>
-                                        {can_manage && (
-                                            <>
-                                                <button
-                                                    onClick={() =>
-                                                        openEditDialog(calendar)
-                                                    }
-                                                    className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-semibold tracking-widest text-gray-600 uppercase transition hover:bg-gray-50"
-                                                >
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(calendar)
-                                                    }
-                                                    className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-semibold tracking-widest text-red-500 uppercase transition hover:bg-red-50"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
-                            <h3 className="text-sm font-semibold text-gray-900">
-                                No calendars yet
-                            </h3>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {can_manage
-                                    ? 'Create your first calendar to start scheduling events.'
-                                    : 'No calendars have been created for this group yet.'}
-                            </p>
-                            {can_manage && (
-                                <button
-                                    onClick={openCreateDialog}
-                                    className="mt-4 inline-flex items-center rounded-md border border-transparent bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
-                                >
-                                    Create Your First Calendar
-                                </button>
-                            )}
-                        </div>
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="mb-6 flex items-center justify-between">
+                    <p className="text-content-secondary text-footnote">
+                        Calendars belonging to this group.
+                    </p>
+                    {can_manage && (
+                        <Button icon={Plus} onClick={openCreateDialog}>
+                            New calendar
+                        </Button>
                     )}
                 </div>
+
+                {calendars.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {calendars.map((calendar) => (
+                            <Card key={calendar.id} material="thin">
+                                <div className="mb-2 flex items-center gap-2">
+                                    <span
+                                        className="size-2.5 shrink-0 rounded-full"
+                                        style={{
+                                            backgroundColor:
+                                                calendar.color ||
+                                                'var(--event-top)',
+                                        }}
+                                    />
+                                    <h3 className="text-headline text-content">
+                                        {calendar.name}
+                                    </h3>
+                                </div>
+                                <p className="text-content-secondary text-footnote mb-4 min-h-10">
+                                    {calendar.description || 'No description'}
+                                </p>
+                                <div className="flex gap-2">
+                                    <LinkButton
+                                        href={`/groups/${group.id}/calendars/${calendar.id}`}
+                                        className="flex-1"
+                                    >
+                                        View
+                                    </LinkButton>
+                                    {can_manage && (
+                                        <>
+                                            <Button
+                                                variant="secondary"
+                                                className="flex-1"
+                                                onClick={() =>
+                                                    openEditDialog(calendar)
+                                                }
+                                            >
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="icon"
+                                                aria-label={`Delete ${calendar.name}`}
+                                                onClick={() =>
+                                                    setDeleting(calendar)
+                                                }
+                                            >
+                                                <Trash2 className="size-4" />
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <EmptyState
+                        icon={CalendarDays}
+                        title="No calendars yet"
+                        description={
+                            can_manage
+                                ? 'Create your first calendar to start scheduling events.'
+                                : 'No calendars have been created for this group yet.'
+                        }
+                        action={
+                            can_manage ? (
+                                <Button icon={Plus} onClick={openCreateDialog}>
+                                    Create your first calendar
+                                </Button>
+                            ) : undefined
+                        }
+                    />
+                )}
             </div>
 
-            {/* Create / Edit Dialog */}
-            <Dialog
+            {/* Create / edit */}
+            <Modal
                 open={dialogOpen}
                 onClose={closeDialog}
-                className="relative z-50"
+                title={editing ? 'Edit calendar' : 'New calendar'}
+                width="md"
+                footer={
+                    <>
+                        <Button variant="secondary" onClick={closeDialog}>
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            form="calendar-form"
+                            loading={processing}
+                        >
+                            {editing ? 'Save changes' : 'Create calendar'}
+                        </Button>
+                    </>
+                }
             >
-                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-                <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-                        <DialogTitle className="mb-4 text-base font-semibold text-gray-900">
-                            {editing ? 'Edit Calendar' : 'New Calendar'}
-                        </DialogTitle>
+                <form
+                    id="calendar-form"
+                    onSubmit={handleSubmit}
+                    className="space-y-4"
+                >
+                    <Field label="Name" error={errors.name}>
+                        <Input
+                            id="name"
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            autoFocus
+                            invalid={Boolean(errors.name)}
+                        />
+                    </Field>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <div>
-                                <label
-                                    htmlFor="name"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Name
-                                </label>
-                                <input
-                                    id="name"
-                                    type="text"
-                                    value={data.name}
-                                    onChange={(e) =>
-                                        setData('name', e.target.value)
-                                    }
-                                    className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    autoFocus
-                                />
-                                {errors.name && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.name}
-                                    </p>
-                                )}
-                            </div>
+                    <Field label="Description" error={errors.description}>
+                        <Textarea
+                            id="description"
+                            value={data.description}
+                            onChange={(e) =>
+                                setData('description', e.target.value)
+                            }
+                            rows={3}
+                            invalid={Boolean(errors.description)}
+                        />
+                    </Field>
 
-                            <div>
-                                <label
-                                    htmlFor="description"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Description
-                                </label>
-                                <textarea
-                                    id="description"
-                                    value={data.description}
-                                    onChange={(e) =>
-                                        setData('description', e.target.value)
-                                    }
-                                    rows={3}
-                                    className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                />
-                                {errors.description && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.description}
-                                    </p>
-                                )}
-                            </div>
+                    <Field label="Colour" error={errors.color}>
+                        <ColorSwatchPicker
+                            value={data.color || null}
+                            onChange={(value) => setData('color', value)}
+                            label="Calendar colour"
+                        />
+                    </Field>
+                </form>
+            </Modal>
 
-                            <div>
-                                <label
-                                    htmlFor="color"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Color
-                                </label>
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        id="color"
-                                        type="color"
-                                        value={data.color || '#4f46e5'}
-                                        onChange={(e) =>
-                                            setData('color', e.target.value)
-                                        }
-                                        className="h-9 w-12 rounded-md border-gray-300"
-                                    />
-                                    <input
-                                        type="text"
-                                        value={data.color}
-                                        onChange={(e) =>
-                                            setData('color', e.target.value)
-                                        }
-                                        placeholder="#4f46e5"
-                                        className="flex-1 rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    />
-                                </div>
-                                {errors.color && (
-                                    <p className="mt-1 text-sm text-red-600">
-                                        {errors.color}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="flex-1 rounded-md bg-gray-800 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
-                                >
-                                    {editing
-                                        ? 'Save Changes'
-                                        : 'Create Calendar'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={closeDialog}
-                                    className="flex-1 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </DialogPanel>
-                </div>
-            </Dialog>
+            {/* Delete confirmation */}
+            <Modal
+                open={deleting !== null}
+                onClose={() => setDeleting(null)}
+                title="Delete calendar"
+                description={
+                    deleting
+                        ? `Delete calendar "${deleting.name}"? This cannot be undone.`
+                        : undefined
+                }
+                width="sm"
+                footer={
+                    <>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setDeleting(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete}>
+                            Delete
+                        </Button>
+                    </>
+                }
+            />
         </>
     );
 }
@@ -335,13 +287,13 @@ function CalendarsHeading() {
     const { group } = usePageProps<{ group: Group }>();
 
     return (
-        <div className="flex items-center justify-between">
-            <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                {group.name} — Calendars
+        <div className="flex items-center justify-between gap-4">
+            <h2 className="text-headline text-chrome-content">
+                {group.name} - Calendars
             </h2>
             <Link
                 href={route('groups.show', group.id)}
-                className="text-sm font-medium text-gray-500 hover:text-gray-800"
+                className="text-chrome-content/70 hover:text-chrome-content text-footnote font-medium"
             >
                 Back to group
             </Link>

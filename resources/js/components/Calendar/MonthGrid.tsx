@@ -1,11 +1,12 @@
-import type { CalendarEvent, GridEvent } from '@/types/calendar';
+import EventPill from './EventPill';
+import type { GridEvent } from '@/types/calendar';
 
 interface MonthGridProps {
     /** Any date within the month to display. */
     month: Date;
     events: GridEvent[];
     onDayClick?: (date: Date) => void;
-    onEventClick?: (event: CalendarEvent) => void;
+    onEventClick?: (event: GridEvent) => void;
 }
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -47,8 +48,8 @@ export default function MonthGrid({
         events.filter((event) => isSameDay(new Date(event.starts_at), date));
 
     return (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 text-xs font-semibold text-gray-500">
+        <div className="border-hairline bg-surface rounded-card shadow-raised overflow-hidden border">
+            <div className="border-hairline text-content-secondary text-caption1 grid grid-cols-7 border-b font-semibold">
                 {WEEKDAY_LABELS.map((label) => (
                     <div key={label} className="px-2 py-2 text-center">
                         {label}
@@ -65,16 +66,16 @@ export default function MonthGrid({
                             key={date.toISOString()}
                             type="button"
                             onClick={() => onDayClick?.(date)}
-                            className={`min-h-24 border-r border-b border-gray-100 p-1 text-left align-top last:border-r-0 focus:ring-2 focus:ring-indigo-500 focus:outline-none focus:ring-inset ${
+                            className={`border-hairline focus:ring-accent min-h-24 border-r border-b p-1 text-left align-top last:border-r-0 focus:ring-2 focus:outline-none focus:ring-inset ${
                                 inMonth
-                                    ? 'bg-white'
-                                    : 'bg-gray-50 text-gray-400'
+                                    ? 'bg-surface'
+                                    : 'bg-canvas text-content-tertiary'
                             }`}
                         >
                             <span
-                                className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                                className={`text-caption1 inline-flex h-6 w-6 items-center justify-center rounded-full ${
                                     isSameDay(date, today)
-                                        ? 'bg-indigo-600 font-semibold text-white'
+                                        ? 'bg-today text-today-content font-semibold'
                                         : ''
                                 }`}
                             >
@@ -82,21 +83,14 @@ export default function MonthGrid({
                             </span>
                             <div className="mt-1 space-y-0.5">
                                 {dayEvents.slice(0, 3).map((event) => (
-                                    <div
+                                    <EventPill
                                         key={event.key}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onEventClick?.(event);
-                                        }}
-                                        className="truncate rounded bg-indigo-100 px-1 py-0.5 text-xs text-indigo-800 hover:bg-indigo-200"
-                                    >
-                                        {event.title}
-                                    </div>
+                                        event={event}
+                                        onClick={onEventClick}
+                                    />
                                 ))}
                                 {dayEvents.length > 3 && (
-                                    <div className="px-1 text-xs text-gray-400">
+                                    <div className="text-content-tertiary text-caption1 px-1">
                                         +{dayEvents.length - 3} more
                                     </div>
                                 )}

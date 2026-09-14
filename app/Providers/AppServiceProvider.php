@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Calendar;
+use App\Models\Event;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Vite;
@@ -10,22 +12,91 @@ use Illuminate\Support\ServiceProvider;
 class AppServiceProvider extends ServiceProvider
 {
     /**
-     * Register any application services.
+     * Abilities that write. Everything else a Super Admin may do freely.
      */
+    private const WRITE_ABILITIES = [
+        'create',
+        'update',
+        'delete',
+        'restore',
+        'forceDelete',
+    ];
+
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
 
-        Gate::before(function (User $user, string $ability) {
-            return $user->isSuperAdmin() ? true : null;
+        /**
+         * Super Admin bypasses every policy, with one carve-out.
+         *
+         * A personal calendar belongs to a person, not to the organisation.
+         * Administering the platform is not a licence to write on someone's
+         * private calendar, so for a write against one this returns null -
+         * deferring to the policy - rather than true. CalendarPolicy and
+         * EventPolicy already refuse a non-owner there; they were simply
+         * never being consulted.
+         *
+         * Reads still pass, which is what makes this read-only rather than
+         * invisible. What can actually be read is already reduced to a busy
+         * block by EventRedactor, which for the same reason does not treat
+         * Super Admin as privileged.
+         */
+        Gate::before(function (User $user, string $ability, array $arguments = []) {
+            if (! $user->isSuperAdmin()) {
+                return null;
+            }
+
+            if ($this->writesToSomeoneElsesPersonalCalendar($user, $ability, $arguments)) {
+                return null;
+            }
+
+            return true;
         });
+    }
+
+    /**
+     * @param  array<int, mixed>  $arguments
+     */
+    private function writesToSomeoneElsesPersonalCalendar(User $user, string $ability, array $arguments): bool
+    {
+        if (! in_array($ability, self::WRITE_ABILITIES, true)) {
+            return false;
+        }
+
+        $calendar = $this->calendarFrom($arguments);
+
+        return $calendar !== null
+            && $calendar->isPersonal()
+            && ! $calendar->isOwnedBy($user);
+    }
+
+    /**
+     * The calendar a policy call is ultimately about.
+     *
+     * Handles the three shapes these abilities are invoked with: a Calendar,
+     * an Event, and the class-name-plus-parent form used for `create`
+     * (`authorize('create', [Event::class, $calendar])`), where the class
+     * name is dropped before the arguments reach here.
+     *
+     * @param  array<int, mixed>  $arguments
+     */
+    private function calendarFrom(array $arguments): ?Calendar
+    {
+        foreach ($arguments as $argument) {
+            if ($argument instanceof Calendar) {
+                return $argument;
+            }
+
+            if ($argument instanceof Event) {
+                return $argument->calendar;
+            }
+        }
+
+        return null;
     }
 }

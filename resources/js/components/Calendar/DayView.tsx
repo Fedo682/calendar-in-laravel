@@ -1,4 +1,4 @@
-import type { CalendarEvent, GridEvent } from '@/types/calendar';
+import type { GridEvent } from '@/types/calendar';
 
 interface DayViewProps {
     date: Date;
@@ -6,7 +6,7 @@ interface DayViewProps {
     events: GridEvent[];
     onClose: () => void;
     onSlotClick?: (dateTime: Date) => void;
-    onEventClick?: (event: CalendarEvent) => void;
+    onEventClick?: (event: GridEvent) => void;
 }
 
 interface PositionedEvent {

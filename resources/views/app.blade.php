@@ -12,20 +12,21 @@
              while the bundle downloads. Inline and tiny for the same reason -
              an external file would cost another round trip.
 
-             The test is inverted relative to the usual snippet because this app
-             is dark by default: under 'system' we go dark unless the OS asks
-             for light outright, so a client reporting no preference at all
-             still lands on the intended default. --}}
+             Paper is the design and paper is light, so 'system' follows the OS
+             the ordinary way round: dark only when the OS asks for dark. A
+             client that reports no preference at all gets paper, which is also
+             what :root carries. --}}
         <script>
             (function () {
                 try {
                     var stored = localStorage.getItem('theme') || 'system';
                     var dark = stored === 'dark' || (stored === 'system' &&
-                        !window.matchMedia('(prefers-color-scheme: light)').matches);
+                        window.matchMedia('(prefers-color-scheme: dark)').matches);
                     document.documentElement.classList.add(dark ? 'dark' : 'light');
                 } catch (e) {
                     // Safari in private mode throws on localStorage. :root
-                    // already defaults to dark, so doing nothing is correct.
+                    // already carries the paper palette, so doing nothing is
+                    // correct.
                 }
             })();
         </script>

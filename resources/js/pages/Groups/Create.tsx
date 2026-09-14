@@ -1,6 +1,6 @@
-import PrimaryButton from '@/components/PrimaryButton';
+import { Button, Card, Field, Input, Textarea } from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEventHandler, ReactNode } from 'react';
 
 export default function CreateGroup() {
@@ -18,75 +18,51 @@ export default function CreateGroup() {
         <>
             <Head title="Create Group" />
 
-            <div className="py-8">
-                <div className="mx-auto max-w-lg px-4 sm:px-6 lg:px-8">
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <form onSubmit={submit} className="space-y-6">
-                            <div>
-                                <label
-                                    htmlFor="name"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Group Name
-                                </label>
-                                <input
-                                    id="name"
-                                    type="text"
-                                    value={data.name}
-                                    onChange={(e) =>
-                                        setData('name', e.target.value)
-                                    }
-                                    placeholder="e.g., Engineering, Sales"
-                                    className="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    autoFocus
-                                />
-                                {errors.name && (
-                                    <p className="mt-2 text-sm text-red-600">
-                                        {errors.name}
-                                    </p>
-                                )}
-                            </div>
+            <div className="mx-auto max-w-lg px-4 py-8 sm:px-6 lg:px-8">
+                <Card material="thin">
+                    <form onSubmit={submit} className="space-y-4">
+                        <Field label="Group name" error={errors.name}>
+                            <Input
+                                id="name"
+                                value={data.name}
+                                onChange={(e) =>
+                                    setData('name', e.target.value)
+                                }
+                                placeholder="e.g., Engineering, Sales"
+                                autoFocus
+                                invalid={Boolean(errors.name)}
+                            />
+                        </Field>
 
-                            <div>
-                                <label
-                                    htmlFor="description"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Description (optional)
-                                </label>
-                                <textarea
-                                    id="description"
-                                    value={data.description}
-                                    onChange={(e) =>
-                                        setData('description', e.target.value)
-                                    }
-                                    placeholder="What is this group for?"
-                                    rows={4}
-                                    className="block w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                />
-                                {errors.description && (
-                                    <p className="mt-2 text-sm text-red-600">
-                                        {errors.description}
-                                    </p>
-                                )}
-                            </div>
+                        <Field
+                            label="Description (optional)"
+                            error={errors.description}
+                        >
+                            <Textarea
+                                id="description"
+                                value={data.description}
+                                onChange={(e) =>
+                                    setData('description', e.target.value)
+                                }
+                                placeholder="What is this group for?"
+                                rows={4}
+                                invalid={Boolean(errors.description)}
+                            />
+                        </Field>
 
-                            <div className="flex items-center justify-end gap-3">
-                                <a
-                                    href="/groups"
-                                    className="text-sm font-medium text-gray-600 hover:text-gray-900"
-                                >
-                                    Cancel
-                                </a>
-                                <PrimaryButton disabled={processing}>
-                                    {processing
-                                        ? 'Creating...'
-                                        : 'Create Group'}
-                                </PrimaryButton>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <Link
+                                href="/groups"
+                                className="text-content-secondary hover:text-content focus-visible:outline-accent rounded-control text-footnote font-medium focus-visible:outline-2"
+                            >
+                                Cancel
+                            </Link>
+                            <Button type="submit" loading={processing}>
+                                Create group
+                            </Button>
+                        </div>
+                    </form>
+                </Card>
             </div>
         </>
     );
@@ -95,8 +71,8 @@ export default function CreateGroup() {
 CreateGroup.layout = (page: ReactNode) => (
     <AuthenticatedLayout
         header={
-            <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                Create a New Group
+            <h2 className="text-headline text-chrome-content">
+                Create a new group
             </h2>
         }
     >

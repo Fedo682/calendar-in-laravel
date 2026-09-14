@@ -1,19 +1,25 @@
 import ApplicationLogo from '@/components/ApplicationLogo';
+import { Card } from '@/components/ui';
 import { Link } from '@inertiajs/react';
 import type { PropsWithChildren } from 'react';
 
+/**
+ * The shell for everything reachable while logged out.
+ *
+ * A single sheet centred on the canvas. It deliberately has no chrome - there
+ * is no calendar to navigate yet, and the source list would have nothing in
+ * it.
+ */
 export default function GuestLayout({ children }: PropsWithChildren) {
     return (
-        <div className="flex min-h-screen flex-col items-center bg-gray-100 pt-6 sm:justify-center sm:pt-0">
-            <div>
-                <Link href="/">
-                    <ApplicationLogo className="h-20 w-20 fill-current text-gray-500" />
-                </Link>
-            </div>
+        <div className="bg-canvas flex min-h-screen flex-col items-center justify-center px-4 py-10">
+            <Link href="/" className="mb-6">
+                <ApplicationLogo className="text-content-secondary h-16 w-16 fill-current" />
+            </Link>
 
-            <div className="mt-6 w-full overflow-hidden bg-white px-6 py-4 shadow-md sm:max-w-md sm:rounded-lg">
+            <Card material="thin" className="w-full sm:max-w-md">
                 {children}
-            </div>
+            </Card>
         </div>
     );
 }

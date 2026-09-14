@@ -1,13 +1,13 @@
 import DayView from '@/components/Calendar/DayView';
-import RecurrenceEditor from '@/components/Calendar/RecurrenceEditor';
+import EventDialog from '@/components/Calendar/EventDialog';
+import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
-import MonthGrid from '@/components/Calendar/MonthGrid';
+import { useEventForm } from '@/components/Calendar/useEventForm';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import type { CalendarEvent, Occurrence, Visibility } from '@/types/calendar';
+import type { CalendarEvent, Occurrence } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
-import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -32,29 +32,6 @@ interface Props {
 
 type DialogMode = 'create' | 'edit';
 
-interface EventFormData {
-    title: string;
-    description: string;
-    location: string;
-    starts_at: string;
-    ends_at: string;
-    all_day: boolean;
-    visibility: Visibility;
-    recurrence_rule: string;
-    recurrence_timezone: string;
-    /** Which occurrences a save or delete applies to. */
-    scope: RecurrenceScope;
-    /** Which instance was opened, for the two scoped operations. */
-    occurrence_start: string;
-}
-
-/** Format a Date as the value expected by <input type="datetime-local">. */
-function toLocalInputValue(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
 function eventsIndexUrl(group: Group, calendar: Calendar): string {
     return `/groups/${group.id}/calendars/${calendar.id}/events`;
 }
@@ -77,25 +54,12 @@ export default function EventsIndex({
         null,
     );
 
-    const form = useForm<EventFormData>({
-        title: '',
-        description: '',
-        location: '',
-        starts_at: '',
-        ends_at: '',
-        all_day: false,
-        visibility: 'public',
-        recurrence_rule: '',
-        recurrence_timezone: '',
-        scope: 'all',
-        occurrence_start: '',
-    });
+    const { form, openCreate, openEdit, reset } = useEventForm();
 
     const closeDialog = () => {
         setDialogMode(null);
         setEditingEvent(null);
-        form.reset();
-        form.clearErrors();
+        reset();
     };
 
     const openCreateDialog = (date: Date) => {
@@ -103,29 +67,7 @@ export default function EventsIndex({
             return;
         }
 
-        // From the month grid, `date` has no time component (midnight) -
-        // default that to a sensible working hour. From a DayView slot
-        // click, `date` already carries the clicked hour - keep it as is.
-        const start = new Date(date);
-        if (start.getHours() === 0 && start.getMinutes() === 0) {
-            start.setHours(9, 0, 0, 0);
-        }
-        const end = new Date(start);
-        end.setHours(start.getHours() + 1);
-
-        form.setData({
-            title: '',
-            description: '',
-            location: '',
-            starts_at: toLocalInputValue(start),
-            ends_at: toLocalInputValue(end),
-            all_day: false,
-            visibility: 'public',
-            recurrence_rule: '',
-            recurrence_timezone: '',
-            scope: 'all',
-            occurrence_start: '',
-        });
+        openCreate(date);
         setEditingEvent(null);
         setDialogMode('create');
     };
@@ -147,21 +89,7 @@ export default function EventsIndex({
             return;
         }
 
-        form.setData({
-            title: full.title,
-            description: full.description ?? '',
-            location: full.location ?? '',
-            starts_at: toLocalInputValue(new Date(full.starts_at)),
-            ends_at: toLocalInputValue(new Date(full.ends_at)),
-            all_day: full.all_day,
-            visibility: full.visibility,
-            recurrence_rule: full.recurrence_rule ?? '',
-            recurrence_timezone: full.recurrence_timezone ?? '',
-            scope: 'all',
-            // The instance the user actually clicked. RECURRENCE-ID if this
-            // occurrence already has an override, otherwise its own start.
-            occurrence_start: full.recurrence_id ?? full.starts_at,
-        });
+        openEdit(full);
         setEditingEvent(full);
         setDialogMode('edit');
     };
@@ -314,247 +242,14 @@ export default function EventsIndex({
                 </div>
             </div>
 
-            <Dialog
+            <EventDialog
                 open={dialogMode !== null}
+                mode={dialogMode ?? 'create'}
+                form={form}
+                onSubmit={submit}
+                onDelete={dialogMode === 'edit' ? destroy : undefined}
                 onClose={closeDialog}
-                className="relative z-50"
-            >
-                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-                <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <DialogPanel className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
-                        <DialogTitle className="mb-4 text-xl font-bold text-gray-900">
-                            {dialogMode === 'edit' ? 'Edit Event' : 'New Event'}
-                        </DialogTitle>
-
-                        <form onSubmit={submit} className="space-y-4">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Title
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.data.title}
-                                    onChange={(e) =>
-                                        form.setData('title', e.target.value)
-                                    }
-                                    className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                                        form.errors.title
-                                            ? 'border-red-500'
-                                            : 'border-gray-300'
-                                    }`}
-                                    required
-                                />
-                                {form.errors.title && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.title}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Description
-                                </label>
-                                <textarea
-                                    value={form.data.description}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'description',
-                                            e.target.value,
-                                        )
-                                    }
-                                    rows={3}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                />
-                                {form.errors.description && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.description}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Location
-                                </label>
-                                <input
-                                    type="text"
-                                    value={form.data.location}
-                                    onChange={(e) =>
-                                        form.setData('location', e.target.value)
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                />
-                                {form.errors.location && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.location}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <input
-                                    id="all_day"
-                                    type="checkbox"
-                                    checked={form.data.all_day}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'all_day',
-                                            e.target.checked,
-                                        )
-                                    }
-                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                <label
-                                    htmlFor="all_day"
-                                    className="text-sm font-medium text-gray-700"
-                                >
-                                    All day
-                                </label>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                                        Starts at
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        value={form.data.starts_at}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'starts_at',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                                            form.errors.starts_at
-                                                ? 'border-red-500'
-                                                : 'border-gray-300'
-                                        }`}
-                                        required
-                                    />
-                                    {form.errors.starts_at && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {form.errors.starts_at}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                                        Ends at
-                                    </label>
-                                    <input
-                                        type="datetime-local"
-                                        value={form.data.ends_at}
-                                        onChange={(e) =>
-                                            form.setData(
-                                                'ends_at',
-                                                e.target.value,
-                                            )
-                                        }
-                                        className={`w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none ${
-                                            form.errors.ends_at
-                                                ? 'border-red-500'
-                                                : 'border-gray-300'
-                                        }`}
-                                        required
-                                    />
-                                    {form.errors.ends_at && (
-                                        <p className="mt-1 text-sm text-red-500">
-                                            {form.errors.ends_at}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-
-                            <RecurrenceEditor
-                                value={form.data.recurrence_rule}
-                                onChange={(rule) =>
-                                    form.setData('recurrence_rule', rule)
-                                }
-                                startsAt={form.data.starts_at}
-                                timezone={form.data.recurrence_timezone}
-                                onTimezoneChange={(tz) =>
-                                    form.setData('recurrence_timezone', tz)
-                                }
-                                error={form.errors.recurrence_rule}
-                                timezoneError={form.errors.recurrence_timezone}
-                            />
-
-                            <div>
-                                <label
-                                    htmlFor="visibility"
-                                    className="mb-1 block text-sm font-medium text-gray-700"
-                                >
-                                    Visibility
-                                </label>
-                                <select
-                                    id="visibility"
-                                    value={form.data.visibility}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'visibility',
-                                            e.target.value as Visibility,
-                                        )
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                >
-                                    <option value="public">
-                                        Public — everyone on this calendar sees
-                                        the details
-                                    </option>
-                                    <option value="private">
-                                        Private — others see only that you are
-                                        busy
-                                    </option>
-                                    <option value="busy">
-                                        Busy — details hidden from everyone
-                                    </option>
-                                </select>
-                                {form.errors.visibility && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.visibility}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-2">
-                                <div>
-                                    {dialogMode === 'edit' && (
-                                        <button
-                                            type="button"
-                                            onClick={destroy}
-                                            disabled={form.processing}
-                                            className="rounded-lg border border-red-300 px-4 py-2 font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                                        >
-                                            Delete
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={closeDialog}
-                                        className="rounded-lg border border-gray-300 px-4 py-2 font-medium transition hover:bg-gray-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={form.processing}
-                                        className="rounded-lg bg-gray-800 px-4 py-2 font-semibold text-white transition hover:bg-gray-700 disabled:opacity-50"
-                                    >
-                                        {dialogMode === 'edit'
-                                            ? 'Save Changes'
-                                            : 'Create Event'}
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-                    </DialogPanel>
-                </div>
-            </Dialog>
+            />
 
             <RecurrenceScopeDialog
                 open={scopePrompt !== null}
