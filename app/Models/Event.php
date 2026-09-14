@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\EventVisibility;
 use App\Observers\EventObserver;
 use Database\Factories\EventFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $starts_at
  * @property Carbon $ends_at
  * @property bool $all_day
+ * @property EventVisibility $visibility
  * @property int|null $created_by
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -38,6 +40,7 @@ class Event extends Model
         'starts_at',
         'ends_at',
         'all_day',
+        'visibility',
         'created_by',
     ];
 
@@ -47,6 +50,9 @@ class Event extends Model
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'all_day' => 'boolean',
+            // The DB column is a plain string; this cast is what actually
+            // constrains it to the three known cases.
+            'visibility' => EventVisibility::class,
         ];
     }
 

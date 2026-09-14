@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RoleName;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -37,6 +38,9 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasFactory, Notifiable;
 
     use \Illuminate\Auth\MustVerifyEmail;
+
+    /** Per-instance memo for isSuperAdmin(); not a database column. */
+    private ?bool $isSuperAdmin = null;
 
     /**
      * Get the attributes that should be cast.
@@ -105,14 +109,47 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(Role::class, 'user_role');
     }
 
+    /**
+     * Memoised because Gate::before calls it on every single authorization
+     * check, and it was issuing one query each time.
+     */
     public function isSuperAdmin(): bool
     {
-        return $this->roles()->where('name', 'super_admin')->exists();
+        return $this->isSuperAdmin ??= $this->roles()
+            ->where('name', RoleName::SuperAdmin->value)
+            ->exists();
     }
 
     public function roleInGroup(Group $group): ?string
     {
         return $group->roleFor($this);
+    }
+
+    public function roleEnumInGroup(Group $group): ?RoleName
+    {
+        return RoleName::tryFromName($this->roleInGroup($group));
+    }
+
+    /**
+     * The calendar this user owns outright, created on first use.
+     *
+     * Every user is entitled to exactly one; the unique index on
+     * calendars.owner_id is what guarantees it, and firstOrCreate keeps a
+     * race from turning into a constraint violation the caller has to handle.
+     */
+    public function personalCalendar(): Calendar
+    {
+        return Calendar::firstOrCreate(
+            ['owner_id' => $this->id],
+            [
+                'type' => Calendar::TYPE_PERSONAL,
+                'group_id' => null,
+                'name' => 'Personal',
+                'description' => 'Your private calendar. Only you can see what is on it.',
+                'color' => '#6366f1',
+                'created_by' => $this->id,
+            ],
+        );
     }
 
     /**
@@ -123,8 +160,17 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function accessibleCalendarIds(): Collection
     {
-        return $this->isSuperAdmin()
-            ? Calendar::query()->pluck('id')
-            : Calendar::whereIn('group_id', $this->memberGroups()->pluck('groups.id'))->pluck('id');
+        if ($this->isSuperAdmin()) {
+            return Calendar::query()->pluck('id');
+        }
+
+        // Personal calendars have no group, so membership alone would miss
+        // them. A Super Admin already sees every calendar above, including
+        // other people's personal ones - EventRedactor is what keeps the
+        // contents of those from being readable.
+        return Calendar::query()
+            ->where('owner_id', $this->id)
+            ->orWhereIn('group_id', $this->memberGroups()->select('groups.id'))
+            ->pluck('id');
     }
 }

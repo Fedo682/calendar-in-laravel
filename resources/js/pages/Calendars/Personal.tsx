@@ -2,29 +2,22 @@ import DayView from '@/components/Calendar/DayView';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { CalendarEvent, Occurrence, Visibility } from '@/types/calendar';
-import { usePageProps } from '@/types/shared';
 import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, useForm } from '@inertiajs/react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
-interface Group {
+interface PersonalCalendar {
     id: number;
     name: string;
-}
-
-interface Calendar {
-    id: number;
-    name: string;
+    description: string | null;
+    color: string | null;
 }
 
 interface Props {
-    group: Group;
-    calendar: Calendar;
-    /** Already redacted for the viewer - there is no fuller copy to reach for. */
+    calendar: PersonalCalendar;
     occurrences: Occurrence[];
     range: { from: string; to: string };
-    can_manage: boolean;
 }
 
 type DialogMode = 'create' | 'edit';
@@ -46,20 +39,7 @@ function toLocalInputValue(date: Date): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-function eventsIndexUrl(group: Group, calendar: Calendar): string {
-    return `/groups/${group.id}/calendars/${calendar.id}/events`;
-}
-
-function eventUrl(group: Group, calendar: Calendar, eventId: number): string {
-    return `${eventsIndexUrl(group, calendar)}/${eventId}`;
-}
-
-export default function EventsIndex({
-    group,
-    calendar,
-    occurrences,
-    can_manage,
-}: Props) {
+export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
     const [month, setMonth] = useState<Date>(new Date());
     const [selectedDay, setSelectedDay] = useState<Date | null>(null);
     const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
@@ -72,7 +52,9 @@ export default function EventsIndex({
         starts_at: '',
         ends_at: '',
         all_day: false,
-        visibility: 'public',
+        // Anything on a personal calendar is private unless its owner says
+        // otherwise; the server applies the same default if this is omitted.
+        visibility: 'private',
     });
 
     const closeDialog = () => {
@@ -83,17 +65,14 @@ export default function EventsIndex({
     };
 
     const openCreateDialog = (date: Date) => {
-        if (!can_manage) {
-            return;
-        }
-
-        // From the month grid, `date` has no time component (midnight) -
-        // default that to a sensible working hour. From a DayView slot
-        // click, `date` already carries the clicked hour - keep it as is.
         const start = new Date(date);
+
+        // A month-grid click carries midnight; a day-view slot click already
+        // carries the hour that was clicked.
         if (start.getHours() === 0 && start.getMinutes() === 0) {
             start.setHours(9, 0, 0, 0);
         }
+
         const end = new Date(start);
         end.setHours(start.getHours() + 1);
 
@@ -104,26 +83,16 @@ export default function EventsIndex({
             starts_at: toLocalInputValue(start),
             ends_at: toLocalInputValue(end),
             all_day: false,
-            visibility: 'public',
+            visibility: 'private',
         });
         setEditingEvent(null);
         setDialogMode('create');
     };
 
     const openEditDialog = (clicked: CalendarEvent) => {
-        if (!can_manage) {
-            return;
-        }
-
         const full = occurrences.find((o) => o.id === clicked.id);
 
         if (!full) {
-            return;
-        }
-
-        // A redacted occurrence carries a stand-in title and null body, so
-        // opening it for edit would offer to save that over the real thing.
-        if (full.is_redacted) {
             return;
         }
 
@@ -144,95 +113,101 @@ export default function EventsIndex({
         e.preventDefault();
 
         if (dialogMode === 'edit' && editingEvent) {
-            form.put(eventUrl(group, calendar, editingEvent.id), {
+            form.put(`/calendars/personal/events/${editingEvent.event_id}`, {
                 preserveScroll: true,
                 onSuccess: () => closeDialog(),
             });
-        } else {
-            form.post(eventsIndexUrl(group, calendar), {
-                preserveScroll: true,
-                onSuccess: () => closeDialog(),
-            });
-        }
-    };
 
-    const destroy = () => {
-        if (!editingEvent) {
             return;
         }
 
-        if (!window.confirm('Delete this event? This cannot be undone.')) {
-            return;
-        }
-
-        form.delete(eventUrl(group, calendar, editingEvent.id), {
+        form.post('/calendars/personal/events', {
             preserveScroll: true,
             onSuccess: () => closeDialog(),
         });
     };
 
-    const goToPrevMonth = () =>
-        setMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
-    const goToNextMonth = () =>
-        setMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
-    const goToToday = () => setMonth(new Date());
+    const destroy = () => {
+        if (!editingEvent) return;
+        if (!window.confirm('Delete this event? This cannot be undone.'))
+            return;
 
-    const monthLabel = month.toLocaleDateString(undefined, {
-        month: 'long',
-        year: 'numeric',
-    });
+        form.delete(`/calendars/personal/events/${editingEvent.event_id}`, {
+            preserveScroll: true,
+            onSuccess: () => closeDialog(),
+        });
+    };
+
+    const shiftMonth = (delta: number) =>
+        setMonth(
+            (current) =>
+                new Date(current.getFullYear(), current.getMonth() + delta, 1),
+        );
 
     return (
         <>
-            <Head title={`${calendar.name} - ${group.name}`} />
+            <Head title={calendar.name} />
 
             <div className="py-8">
                 <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                    {selectedDay ? (
-                        <DayView
-                            date={selectedDay}
-                            events={occurrences}
-                            onClose={() => setSelectedDay(null)}
-                            onSlotClick={
-                                can_manage ? openCreateDialog : undefined
-                            }
-                            onEventClick={openEditDialog}
-                        />
-                    ) : (
-                        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={goToPrevMonth}
-                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                    >
-                                        ← Prev
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={goToToday}
-                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                    >
-                                        Today
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={goToNextMonth}
-                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                    >
-                                        Next →
-                                    </button>
-                                </div>
-                                <h3 className="text-base font-semibold text-gray-900">
-                                    {monthLabel}
-                                </h3>
-                            </div>
+                    <div className="mb-4 rounded-lg border border-gray-200 bg-white px-6 py-4 shadow-sm">
+                        <p className="text-sm text-gray-600">
+                            Everything here is yours. Events default to private,
+                            so other people see only that you are busy, never
+                            the title, description or location.
+                        </p>
+                    </div>
 
-                            <MonthGrid
-                                month={month}
+                    <div className="mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => shiftMonth(-1)}
+                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Previous
+                            </button>
+                            <button
+                                onClick={() => setMonth(new Date())}
+                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Today
+                            </button>
+                            <button
+                                onClick={() => shiftMonth(1)}
+                                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Next
+                            </button>
+                            <span className="ml-2 text-sm font-semibold text-gray-900">
+                                {month.toLocaleDateString(undefined, {
+                                    month: 'long',
+                                    year: 'numeric',
+                                })}
+                            </span>
+                        </div>
+
+                        <button
+                            onClick={() => openCreateDialog(new Date())}
+                            className="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold tracking-widest text-white uppercase transition hover:bg-gray-700"
+                        >
+                            New Event
+                        </button>
+                    </div>
+
+                    <MonthGrid
+                        month={month}
+                        events={occurrences}
+                        onDayClick={(date) => setSelectedDay(date)}
+                        onEventClick={openEditDialog}
+                    />
+
+                    {selectedDay && (
+                        <div className="mt-6">
+                            <DayView
+                                date={selectedDay}
                                 events={occurrences}
-                                onDayClick={(date) => setSelectedDay(date)}
+                                onClose={() => setSelectedDay(null)}
+                                onSlotClick={openCreateDialog}
                                 onEventClick={openEditDialog}
                             />
                         </div>
@@ -292,11 +267,6 @@ export default function EventsIndex({
                                     rows={3}
                                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 />
-                                {form.errors.description && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.description}
-                                    </p>
-                                )}
                             </div>
 
                             <div>
@@ -311,17 +281,12 @@ export default function EventsIndex({
                                     }
                                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 />
-                                {form.errors.location && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.location}
-                                    </p>
-                                )}
                             </div>
 
                             <div className="flex items-center gap-2">
                                 <input
-                                    id="all_day"
                                     type="checkbox"
+                                    id="personal_all_day"
                                     checked={form.data.all_day}
                                     onChange={(e) =>
                                         form.setData(
@@ -332,7 +297,7 @@ export default function EventsIndex({
                                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 <label
-                                    htmlFor="all_day"
+                                    htmlFor="personal_all_day"
                                     className="text-sm font-medium text-gray-700"
                                 >
                                     All day
@@ -396,13 +361,13 @@ export default function EventsIndex({
 
                             <div>
                                 <label
-                                    htmlFor="visibility"
+                                    htmlFor="personal_visibility"
                                     className="mb-1 block text-sm font-medium text-gray-700"
                                 >
                                     Visibility
                                 </label>
                                 <select
-                                    id="visibility"
+                                    id="personal_visibility"
                                     value={form.data.visibility}
                                     onChange={(e) =>
                                         form.setData(
@@ -412,23 +377,18 @@ export default function EventsIndex({
                                     }
                                     className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                                 >
-                                    <option value="public">
-                                        Public — everyone on this calendar sees
-                                        the details
-                                    </option>
                                     <option value="private">
-                                        Private — others see only that you are
+                                        Private - others see only that you are
                                         busy
                                     </option>
                                     <option value="busy">
-                                        Busy — details hidden from everyone
+                                        Busy - details hidden from everyone
+                                    </option>
+                                    <option value="public">
+                                        Public - anyone who can see this
+                                        calendar sees the details
                                     </option>
                                 </select>
-                                {form.errors.visibility && (
-                                    <p className="mt-1 text-sm text-red-500">
-                                        {form.errors.visibility}
-                                    </p>
-                                )}
                             </div>
 
                             <div className="flex items-center justify-between pt-2">
@@ -444,22 +404,20 @@ export default function EventsIndex({
                                         </button>
                                     )}
                                 </div>
-                                <div className="flex gap-3">
+                                <div className="flex gap-2">
                                     <button
                                         type="button"
                                         onClick={closeDialog}
-                                        className="rounded-lg border border-gray-300 px-4 py-2 font-medium transition hover:bg-gray-50"
+                                        className="rounded-lg border border-gray-300 px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={form.processing}
-                                        className="rounded-lg bg-gray-800 px-4 py-2 font-semibold text-white transition hover:bg-gray-700 disabled:opacity-50"
+                                        className="rounded-lg bg-gray-800 px-4 py-2 font-medium text-white transition hover:bg-gray-700 disabled:opacity-50"
                                     >
-                                        {dialogMode === 'edit'
-                                            ? 'Save Changes'
-                                            : 'Create Event'}
+                                        {form.processing ? 'Saving...' : 'Save'}
                                     </button>
                                 </div>
                             </div>
@@ -471,34 +429,14 @@ export default function EventsIndex({
     );
 }
 
-function EventsHeading() {
-    const { group, calendar, can_manage } = usePageProps<Props>();
-
-    return (
-        <div className="flex items-center justify-between">
-            <div>
-                <h2 className="text-xl leading-tight font-semibold text-gray-800">
-                    {calendar.name}
-                </h2>
-                <p className="text-sm text-gray-500">{group.name}</p>
-            </div>
-            <div className="flex items-center gap-3">
-                {!can_manage && (
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                        View only
-                    </span>
-                )}
-                <Link
-                    href={`/groups/${group.id}/calendars`}
-                    className="text-sm font-medium text-gray-500 hover:text-gray-800"
-                >
-                    Back to calendars
-                </Link>
-            </div>
-        </div>
-    );
-}
-
-EventsIndex.layout = (page: ReactNode) => (
-    <AuthenticatedLayout header={<EventsHeading />}>{page}</AuthenticatedLayout>
+PersonalCalendarPage.layout = (page: ReactNode) => (
+    <AuthenticatedLayout
+        header={
+            <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                My Calendar
+            </h2>
+        }
+    >
+        {page}
+    </AuthenticatedLayout>
 );

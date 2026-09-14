@@ -5,6 +5,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupMembershipController;
+use App\Http\Controllers\PersonalCalendarController;
+use App\Http\Controllers\PersonalEventController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +63,20 @@ Route::middleware('auth')->group(function () {
     // ===================================================================
     // PERSONAL CALENDARS & EVENT VISIBILITY
     // ===================================================================
+
+    // Not nested under a group: a personal calendar belongs to one user and
+    // has no group_id, so there is no {group} segment to bind.
+    Route::get('calendars/personal', [PersonalCalendarController::class, 'show'])
+        ->name('calendars.personal');
+
+    // No {calendar} segment either: the calendar is whichever one belongs to
+    // the caller, and the policy is what ties {event} back to it.
+    Route::post('calendars/personal/events', [PersonalEventController::class, 'store'])
+        ->name('calendars.personal.events.store');
+    Route::put('calendars/personal/events/{event}', [PersonalEventController::class, 'update'])
+        ->name('calendars.personal.events.update');
+    Route::delete('calendars/personal/events/{event}', [PersonalEventController::class, 'destroy'])
+        ->name('calendars.personal.events.destroy');
 
     // ===================================================================
     // USER PREFERENCES (timezone, appearance)

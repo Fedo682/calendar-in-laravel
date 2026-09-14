@@ -56,6 +56,14 @@ export default function AuthenticatedLayout({
                                 >
                                     Calendars
                                 </NavLink>
+                                <NavLink
+                                    href={route('calendars.personal')}
+                                    active={route().current(
+                                        'calendars.personal*',
+                                    )}
+                                >
+                                    My Calendar
+                                </NavLink>
                             </div>
                         </div>
 
@@ -174,6 +182,12 @@ export default function AuthenticatedLayout({
                             }
                         >
                             Calendars
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('calendars.personal')}
+                            active={route().current('calendars.personal*')}
+                        >
+                            My Calendar
                         </ResponsiveNavLink>
                     </div>
 
