@@ -161,3 +161,58 @@ test('redactMany does not issue a role query per event', function () {
         // count - before the group memo this was one query per event.
         ->and($queries)->toBeLessThan(10);
 });
+
+test('a redacted personal-calendar event carries the owner name', function () {
+    $owner = User::factory()->create(['name' => 'Jane Smith']);
+    $viewer = User::factory()->create();
+    $personal = $owner->personalCalendar();
+
+    $event = Event::factory()->create([
+        'calendar_id' => $personal->id,
+        'visibility' => EventVisibility::Private,
+        'created_by' => $owner->id,
+    ]);
+
+    $redacted = app(EventRedactor::class)->redact($event, $viewer);
+
+    expect($redacted->isRedacted)->toBeTrue();
+    expect($redacted->title)->toBe('Busy');
+    expect($redacted->ownerName)->toBe('Jane Smith');
+});
+
+test('a visible personal-calendar event carries no owner name', function () {
+    $owner = User::factory()->create(['name' => 'Jane Smith']);
+    $viewer = User::factory()->create();
+    $personal = $owner->personalCalendar();
+
+    $event = Event::factory()->create([
+        'calendar_id' => $personal->id,
+        'visibility' => EventVisibility::Public,
+        'created_by' => $owner->id,
+    ]);
+
+    $redacted = app(EventRedactor::class)->redact($event, $viewer);
+
+    expect($redacted->isRedacted)->toBeFalse();
+    expect($redacted->ownerName)->toBeNull();
+});
+
+test('a redacted group-calendar event carries no owner name', function () {
+    $group = Group::factory()->create();
+    $creator = User::factory()->create();
+    asGroupRole($group, $creator, 'member');
+    $viewer = User::factory()->create();
+    asGroupRole($group, $viewer, 'member');
+    $calendar = Calendar::factory()->create(['group_id' => $group->id]);
+
+    $event = Event::factory()->create([
+        'calendar_id' => $calendar->id,
+        'visibility' => EventVisibility::Busy,
+        'created_by' => $creator->id,
+    ]);
+
+    $redacted = app(EventRedactor::class)->redact($event, $viewer);
+
+    expect($redacted->isRedacted)->toBeTrue();
+    expect($redacted->ownerName)->toBeNull();
+});

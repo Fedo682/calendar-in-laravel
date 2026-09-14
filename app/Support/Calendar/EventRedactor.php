@@ -84,6 +84,7 @@ final class EventRedactor
             recurrenceInstanceId: $event->recurrence_id === null
                 ? null
                 : CarbonImmutable::parse($event->recurrence_id)->utc(),
+            ownerName: ($calendar->isPersonal() && ! $visible) ? $calendar->owner?->name : null,
         );
     }
 
@@ -98,7 +99,7 @@ final class EventRedactor
      */
     public function redactMany(EloquentCollection $events, User $viewer): Collection
     {
-        $events->loadMissing('calendar.group');
+        $events->loadMissing('calendar.group', 'calendar.owner');
 
         // One Group instance per group id, so roleFor()'s per-instance memo
         // is actually shared across every event in that group.

@@ -1,25 +1,14 @@
+import EventDialog from '@/components/Calendar/EventDialog';
+import EventMessageDialog from '@/components/Calendar/EventMessageDialog';
 import MonthGrid from '@/components/Calendar/MonthGrid';
-import {
-    Badge,
-    Button,
-    Card,
-    Checkbox,
-    EmptyState,
-    Field,
-    Input,
-    Modal,
-    Select,
-    Textarea,
-} from '@/components/ui';
+import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
+import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
+import { useEventForm } from '@/components/Calendar/useEventForm';
+import { Badge, Button, Card, EmptyState } from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
-import type {
-    GridEvent,
-    Occurrence,
-    Visibility,
-    WritableCalendar,
-} from '@/types/calendar';
+import type { GridEvent, Occurrence, WritableCalendar } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
@@ -33,6 +22,13 @@ interface UpcomingEvent extends Occurrence {
     conflicts_with: string[];
 }
 
+interface TeamBusyGroup {
+    group_id: number;
+    group_name: string;
+    busy_count: number;
+    occurrences: Occurrence[];
+}
+
 interface DashboardProps {
     /** First of the month the grid is showing, as YYYY-MM-DD. */
     month: string;
@@ -40,23 +36,7 @@ interface DashboardProps {
     upcoming_events: UpcomingEvent[];
     window_days: number;
     writable_calendars: WritableCalendar[];
-}
-
-interface EventForm {
-    title: string;
-    description: string;
-    location: string;
-    all_day: boolean;
-    starts_at: string;
-    ends_at: string;
-    visibility: Visibility;
-}
-
-/** Format a Date as the value expected by <input type="datetime-local">. */
-function toLocalInputValue(date: Date): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    team_busy: TeamBusyGroup[];
 }
 
 function formatDayHeading(date: Date): string {
@@ -135,6 +115,7 @@ export default function Dashboard() {
         upcoming_events: upcoming,
         window_days: windowDays,
         writable_calendars: writableCalendars,
+        team_busy: teamBusy,
     } = usePageProps<DashboardProps>();
 
     const monthDate = new Date(`${month}T00:00:00`);
@@ -143,21 +124,26 @@ export default function Dashboard() {
     ).length;
 
     const [reportedIds, setReportedIds] = useState<number[]>([]);
+    const [messagedIds, setMessagedIds] = useState<number[]>([]);
+    const [messagingEvent, setMessagingEvent] = useState<UpcomingEvent | null>(
+        null,
+    );
+    const [expandedTeams, setExpandedTeams] = useState<Set<number>>(new Set());
+    const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(
+        null,
+    );
     const [editing, setEditing] = useState<Occurrence | null>(null);
-    const [creating, setCreating] = useState(false);
+    const [scopePrompt, setScopePrompt] = useState<'save' | null>(null);
     const [targetCalendarId, setTargetCalendarId] = useState<number | null>(
         writableCalendars[0]?.id ?? null,
     );
 
-    const form = useForm<EventForm>({
-        title: '',
-        description: '',
-        location: '',
-        all_day: false,
-        starts_at: '',
-        ends_at: '',
-        visibility: 'public',
-    });
+    const {
+        form,
+        openCreate: startCreate,
+        openEdit: startEdit,
+        reset,
+    } = useEventForm();
 
     /** Navigate the grid a whole month at a time. */
     const shiftMonth = (delta: number) => {
@@ -179,42 +165,82 @@ export default function Dashboard() {
         router.get('/dashboard', {}, { preserveScroll: true });
     };
 
+    const closeDialog = () => {
+        setDialogMode(null);
+        setEditing(null);
+        reset();
+    };
+
     const openCreate = (date: Date) => {
         if (writableCalendars.length === 0) return;
-
-        const start = new Date(date);
-
-        // A month-grid click carries midnight; default that to a working hour
-        // rather than scheduling something for 00:00.
-        if (start.getHours() === 0 && start.getMinutes() === 0) {
-            start.setHours(9, 0, 0, 0);
-        }
-
-        const end = new Date(start);
-        end.setHours(start.getHours() + 1);
 
         const target =
             writableCalendars.find((c) => c.id === targetCalendarId) ??
             writableCalendars[0];
 
-        form.setData({
-            title: '',
-            description: '',
-            location: '',
-            all_day: false,
-            starts_at: toLocalInputValue(start),
-            ends_at: toLocalInputValue(end),
-            // A personal calendar defaults its events to private; the server
-            // applies the same rule if this is omitted.
-            visibility: target.type === 'personal' ? 'private' : 'public',
-        });
+        // A personal calendar defaults its events to private; the server
+        // applies the same rule if this is omitted.
+        startCreate(date, target.type === 'personal' ? 'private' : 'public');
         setTargetCalendarId(target.id);
-        form.clearErrors();
-        setCreating(true);
+        setEditing(null);
+        setDialogMode('create');
     };
 
-    const submitCreate = (e: FormEvent) => {
+    const openEdit = (clicked: GridEvent) => {
+        // The grid hands back the item it rendered; resolve it to the full
+        // occurrence so the dialog has the fields the grid never needed.
+        const event = occurrences.find((o) => o.key === clicked.key);
+
+        if (!event || !event.can_edit || event.is_redacted) return;
+
+        startEdit(event);
+        setEditing(event);
+        setDialogMode('edit');
+    };
+
+    /**
+     * Whether editing this event needs to ask which occurrences to apply to.
+     *
+     * The dashboard's dialog previously had no recurrence fields at all - the
+     * fields it collected were a hand copy that had drifted out of sync with
+     * the other two pages. Sharing EventDialog gives it RecurrenceEditor "for
+     * free", which means an edit here can now change a recurring series, so
+     * it needs the same this/following/all confirmation Events/Index and the
+     * personal calendar already ask - without it, saving would silently
+     * apply to the whole series every time.
+     */
+    const needsScope =
+        dialogMode === 'edit' && (editing?.is_recurring ?? false);
+
+    const saveWithScope = (scope: RecurrenceScope) => {
+        if (!editing) return;
+
+        form.transform((data) => ({ ...data, scope }));
+
+        form.put(eventUrl(editing), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setScopePrompt(null);
+                closeDialog();
+            },
+            onFinish: () => form.transform((data) => data),
+        });
+    };
+
+    const submit = (e: FormEvent) => {
         e.preventDefault();
+
+        if (dialogMode === 'edit' && editing) {
+            if (needsScope) {
+                setScopePrompt('save');
+
+                return;
+            }
+
+            saveWithScope('all');
+
+            return;
+        }
 
         const target = writableCalendars.find((c) => c.id === targetCalendarId);
 
@@ -225,38 +251,21 @@ export default function Dashboard() {
         // route that owns that calendar.
         form.post(target.create_url, {
             preserveScroll: true,
-            onSuccess: () => setCreating(false),
+            onSuccess: () => closeDialog(),
         });
     };
 
-    const openEdit = (clicked: GridEvent) => {
-        // The grid hands back the item it rendered; resolve it to the full
-        // occurrence so the dialog has the fields the grid never needed.
-        const event = occurrences.find((o) => o.key === clicked.key);
+    const toggleTeam = (groupId: number) => {
+        setExpandedTeams((prev) => {
+            const next = new Set(prev);
 
-        if (!event || !event.can_edit || event.is_redacted) return;
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
 
-        setEditing(event);
-        form.setData({
-            title: event.title,
-            description: event.description ?? '',
-            location: event.location ?? '',
-            all_day: event.all_day,
-            starts_at: toLocalInputValue(new Date(event.starts_at)),
-            ends_at: toLocalInputValue(new Date(event.ends_at)),
-            visibility: event.visibility,
-        });
-        form.clearErrors();
-    };
-
-    const submitEdit = (e: FormEvent) => {
-        e.preventDefault();
-
-        if (!editing) return;
-
-        form.put(eventUrl(editing), {
-            preserveScroll: true,
-            onSuccess: () => setEditing(null),
+            return next;
         });
     };
 
@@ -277,9 +286,6 @@ export default function Dashboard() {
     };
 
     const days = groupByDay(upcoming);
-    const selectedCalendar = writableCalendars.find(
-        (c) => c.id === targetCalendarId,
-    );
 
     return (
         <>
@@ -438,7 +444,7 @@ export default function Dashboard() {
                                                                 )}
                                                             </div>
 
-                                                            <div className="shrink-0">
+                                                            <div className="flex shrink-0 items-center gap-2">
                                                                 {event.can_edit &&
                                                                 !event.is_redacted ? (
                                                                     <Button
@@ -453,31 +459,54 @@ export default function Dashboard() {
                                                                         Edit
                                                                     </Button>
                                                                 ) : (
-                                                                    event
-                                                                        .conflicts_with
-                                                                        .length >
-                                                                        0 &&
-                                                                    event.group_id !==
-                                                                        null &&
-                                                                    (reportedIds.includes(
-                                                                        event.event_id,
-                                                                    ) ? (
-                                                                        <span className="text-content-tertiary text-caption1">
-                                                                            Reported
-                                                                        </span>
-                                                                    ) : (
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            onClick={() =>
-                                                                                reportConflict(
-                                                                                    event,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            Report
-                                                                        </Button>
-                                                                    ))
+                                                                    <>
+                                                                        {event.group_id !==
+                                                                            null &&
+                                                                            (messagedIds.includes(
+                                                                                event.event_id,
+                                                                            ) ? (
+                                                                                <span className="text-content-tertiary text-caption1">
+                                                                                    Messaged
+                                                                                </span>
+                                                                            ) : (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() =>
+                                                                                        setMessagingEvent(
+                                                                                            event,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Message
+                                                                                </Button>
+                                                                            ))}
+                                                                        {event
+                                                                            .conflicts_with
+                                                                            .length >
+                                                                            0 &&
+                                                                            event.group_id !==
+                                                                                null &&
+                                                                            (reportedIds.includes(
+                                                                                event.event_id,
+                                                                            ) ? (
+                                                                                <span className="text-content-tertiary text-caption1">
+                                                                                    Reported
+                                                                                </span>
+                                                                            ) : (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() =>
+                                                                                        reportConflict(
+                                                                                            event,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Report
+                                                                                </Button>
+                                                                            ))}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -489,184 +518,134 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </Card>
+
+                        {teamBusy.length > 0 && (
+                            <Card material="thin" padded={false}>
+                                <h3 className="border-hairline text-headline text-content border-b px-4 py-3">
+                                    Team busy
+                                </h3>
+                                <div className="divide-hairline divide-y">
+                                    {teamBusy.map((team) => {
+                                        const expanded = expandedTeams.has(
+                                            team.group_id,
+                                        );
+
+                                        return (
+                                            <div key={team.group_id}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        toggleTeam(
+                                                            team.group_id,
+                                                        )
+                                                    }
+                                                    className="hover:bg-surface-raised flex w-full items-center justify-between px-4 py-3 text-start"
+                                                >
+                                                    <span className="text-content text-footnote font-medium">
+                                                        {team.group_name} -{' '}
+                                                        {team.busy_count} busy
+                                                    </span>
+                                                    <ChevronRight
+                                                        className={`text-content-tertiary size-4 shrink-0 transition-transform ${
+                                                            expanded
+                                                                ? 'rotate-90'
+                                                                : ''
+                                                        }`}
+                                                    />
+                                                </button>
+                                                {expanded && (
+                                                    <ul className="space-y-2 px-4 pb-3">
+                                                        {team.occurrences
+                                                            .length === 0 ? (
+                                                            <li className="text-content-tertiary text-caption1">
+                                                                Nothing
+                                                                scheduled.
+                                                            </li>
+                                                        ) : (
+                                                            team.occurrences.map(
+                                                                (
+                                                                    occurrence,
+                                                                ) => (
+                                                                    <li
+                                                                        key={
+                                                                            occurrence.key
+                                                                        }
+                                                                    >
+                                                                        <p className="text-content text-footnote">
+                                                                            Busy
+                                                                            {occurrence.owner_name
+                                                                                ? ` - ${occurrence.owner_name}`
+                                                                                : ''}
+                                                                        </p>
+                                                                        <p className="text-content-tertiary text-caption1">
+                                                                            {formatTimeRange(
+                                                                                occurrence,
+                                                                            )}
+                                                                        </p>
+                                                                    </li>
+                                                                ),
+                                                            )
+                                                        )}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </Card>
+                        )}
                     </aside>
                 </div>
             </div>
 
-            {/* ---- create ---- */}
-            <Modal
-                open={creating}
-                onClose={() => setCreating(false)}
-                title="New event"
-                width="lg"
-            >
-                <form onSubmit={submitCreate} className="space-y-4">
-                    <Field
-                        label="Calendar"
-                        hint={
-                            selectedCalendar?.type === 'personal'
-                                ? 'Events here are private by default - others see only that you are busy.'
-                                : undefined
-                        }
-                    >
-                        <Select
-                            value={targetCalendarId ?? ''}
-                            onChange={(e) => {
-                                const id = Number(e.target.value);
-                                setTargetCalendarId(id);
+            <EventDialog
+                open={dialogMode !== null}
+                mode={dialogMode ?? 'create'}
+                form={form}
+                calendars={
+                    dialogMode === 'create' ? writableCalendars : undefined
+                }
+                targetCalendarId={targetCalendarId}
+                onTargetChange={(id) => {
+                    setTargetCalendarId(id);
 
-                                const next = writableCalendars.find(
-                                    (c) => c.id === id,
-                                );
+                    const next = writableCalendars.find((c) => c.id === id);
 
-                                if (next) {
-                                    form.setData(
-                                        'visibility',
-                                        next.type === 'personal'
-                                            ? 'private'
-                                            : 'public',
-                                    );
-                                }
-                            }}
-                        >
-                            {writableCalendars.map((calendar) => (
-                                <option key={calendar.id} value={calendar.id}>
-                                    {calendar.group_name
-                                        ? `${calendar.group_name} - ${calendar.name}`
-                                        : calendar.name}
-                                </option>
-                            ))}
-                        </Select>
-                    </Field>
-
-                    <EventFields form={form} />
-
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={() => setCreating(false)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" loading={form.processing}>
-                            Create
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
-
-            {/* ---- edit ---- */}
-            <Modal
-                open={editing !== null}
-                onClose={() => setEditing(null)}
-                title="Edit event"
-                width="lg"
-            >
-                <form onSubmit={submitEdit} className="space-y-4">
-                    <EventFields form={form} />
-
-                    <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={() => setEditing(null)}
-                        >
-                            Cancel
-                        </Button>
-                        <Button type="submit" loading={form.processing}>
-                            Save
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
-        </>
-    );
-}
-
-/** The fields both dialogs share. */
-function EventFields({
-    form,
-}: {
-    form: ReturnType<typeof useForm<EventForm>>;
-}) {
-    return (
-        <>
-            <Field label="Title" error={form.errors.title} required>
-                <Input
-                    value={form.data.title}
-                    onChange={(e) => form.setData('title', e.target.value)}
-                    invalid={Boolean(form.errors.title)}
-                    required
-                />
-            </Field>
-
-            <Field label="Description">
-                <Textarea
-                    rows={2}
-                    value={form.data.description}
-                    onChange={(e) =>
-                        form.setData('description', e.target.value)
+                    if (next) {
+                        form.setData(
+                            'visibility',
+                            next.type === 'personal' ? 'private' : 'public',
+                        );
                     }
-                />
-            </Field>
-
-            <Field label="Location">
-                <Input
-                    value={form.data.location}
-                    onChange={(e) => form.setData('location', e.target.value)}
-                />
-            </Field>
-
-            <Checkbox
-                checked={form.data.all_day}
-                onChange={(e) => form.setData('all_day', e.target.checked)}
-                label="All day"
+                }}
+                onSubmit={submit}
+                onClose={closeDialog}
             />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Starts at" error={form.errors.starts_at} required>
-                    <Input
-                        type="datetime-local"
-                        value={form.data.starts_at}
-                        onChange={(e) =>
-                            form.setData('starts_at', e.target.value)
-                        }
-                        invalid={Boolean(form.errors.starts_at)}
-                        required
-                    />
-                </Field>
-                <Field label="Ends at" error={form.errors.ends_at} required>
-                    <Input
-                        type="datetime-local"
-                        value={form.data.ends_at}
-                        onChange={(e) =>
-                            form.setData('ends_at', e.target.value)
-                        }
-                        invalid={Boolean(form.errors.ends_at)}
-                        required
-                    />
-                </Field>
-            </div>
+            <RecurrenceScopeDialog
+                open={scopePrompt !== null}
+                action="save"
+                processing={form.processing}
+                onCancel={() => setScopePrompt(null)}
+                onConfirm={(scope) => saveWithScope(scope)}
+            />
 
-            <Field label="Visibility" error={form.errors.visibility}>
-                <Select
-                    value={form.data.visibility}
-                    onChange={(e) =>
-                        form.setData('visibility', e.target.value as Visibility)
+            {messagingEvent && (
+                <EventMessageDialog
+                    open={messagingEvent !== null}
+                    onClose={() => setMessagingEvent(null)}
+                    onSent={() =>
+                        setMessagedIds((ids) => [
+                            ...ids,
+                            messagingEvent.event_id,
+                        ])
                     }
-                >
-                    <option value="public">
-                        Public - everyone on this calendar sees the details
-                    </option>
-                    <option value="private">
-                        Private - others see only that you are busy
-                    </option>
-                    <option value="busy">
-                        Busy - details hidden from everyone
-                    </option>
-                </Select>
-            </Field>
+                    groupId={messagingEvent.group_id!}
+                    calendarId={messagingEvent.calendar_id}
+                    eventId={messagingEvent.event_id}
+                    occurrenceStart={messagingEvent.starts_at}
+                />
+            )}
         </>
     );
 }

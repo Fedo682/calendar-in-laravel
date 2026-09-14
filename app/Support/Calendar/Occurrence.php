@@ -87,6 +87,7 @@ final readonly class Occurrence implements Arrayable
             'calendar_name' => $this->event->calendarName,
             'calendar_color' => $this->event->calendarColor,
             'group_name' => $this->event->groupName,
+            'owner_name' => $this->event->ownerName,
         ];
     }
 }

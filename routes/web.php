@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function () {
             Route::resource('events', EventController::class)->except(['create', 'edit']);
             Route::post('events/{event}/report-conflict', [EventController::class, 'reportConflict'])
                 ->name('events.report-conflict');
+            Route::post('events/{event}/message', [EventController::class, 'sendMessage'])
+                ->name('events.message');
         });
     });
 

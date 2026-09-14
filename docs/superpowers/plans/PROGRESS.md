@@ -11,27 +11,61 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next:** Task 6 of the paper UI conversion — calendar page chrome
-> (toolbar/grid conversion for Events/Index, Personal, and pointing Dashboard
-> at the shared EventDialog).
+> **Team busy-visibility, conflict scoping, the team-busy panel, and
+> member-to-admin messaging are implemented, tested, and passing all four
+> gates.** Spec: `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`.
+> Plan: `docs/superpowers/plans/2026-09-14-team-busy-visibility-and-messaging.md`
+> (all 9 tasks done). Branch: `phase/7-team-visibility-and-messaging`, stacked
+> on `phase/6-ui-conversion` (not on `dev` - `dev` does not yet contain that
+> branch's Dashboard/Events/Personal conversion this feature's frontend
+> builds on). Not yet merged or PR'd - both branches still need their own
+> checkpoint/PR, in order (`phase/6-ui-conversion` first, then this one
+> rebased onto the resulting `dev`).
 >
-> **Task 5's Step 9 (manual browser check of the recurrence scope flow) was
-> NOT performed** — no browser automation is available in this session. The
-> HTTP-level behaviour it would exercise is covered by RecurringEventTest
-> (14/14) and RecurrenceEditorTest, and the wiring was verified by static
-> review, but nobody has actually clicked through "edit one occurrence ->
-> choose 'This event' -> confirm only that occurrence changed" in a real
-> browser since the extraction. Do this by hand before treating Task 5 as
-> fully closed.
+> **One known gap, found while wiring the frontend:** the "Message" button's
+> `messagedIds` is local React state, so a "Messaged" row reverts to
+> "Message" on page reload even though the server-side dedup still silently
+> blocks a second send (it just redirects with a flash error instead of
+> visibly failing). A future pass could have the server tell the client
+> which occurrences this viewer has already messaged, so the button state
+> survives a reload. Not blocking - the dedup is enforced either way - but
+> worth fixing before this feels finished.
 >
-> Branch: `phase/6-ui-conversion`, **pushed to origin** (not merged - just
-> backed up, since this session was stopped proactively at 96% context rather
-> than cut off by a rate limit). **Stacked on `feat/paper-theme-and-dashboard`,
-> not on `dev`** — the conversion needs that branch's tokens and its Dashboard
-> reference conversion, and it was still unmerged when this started. Rebase
-> onto `dev` once the paper theme lands - check whether
-> `feat/paper-theme-and-dashboard` has been merged first; if so, rebase this
-> branch onto `dev` directly instead of staying stacked on a now-dead branch.
+> **One manual browser check outstanding for this feature, not performed** -
+> no browser automation is available in this session: click "Message" on an
+> agenda row for a group event you can't edit, send a message, confirm the
+> dialog closes and the button reads "Messaged". Covered at the HTTP level
+> by `tests/Feature/EventMessageTest.php`, not yet clicked through by hand.
+>
+> **After that branch is merged, resume the paper UI conversion plan at
+> Task 7 — the landing page.**
+>
+> **Two manual browser checks from the UI conversion plan are still
+> outstanding, neither performed** - no
+> browser automation is available in this session:
+> 1. Task 5's Step 9: edit one occurrence of a recurring event, choose "This
+>    event" in the scope prompt, confirm only that occurrence changed.
+> 2. Task 6's Step 6: month grid, day view and the create dialog on all three
+>    pages (Events/Index, Personal, Dashboard), in both appearances - confirm
+>    event pills take their calendar's colour and a redacted event reads as a
+>    flat "Busy" block.
+>
+> Both are covered at the HTTP/component level by existing tests and were
+> verified by static code review, but nobody has clicked through either in an
+> actual browser since these changes landed. Do both by hand before trusting
+> this phase in production.
+>
+> **Task 6 also gave Dashboard's dialog recurrence editing and a scope prompt
+> it never had before** - its old hand-rolled fields had no RecurrenceEditor
+> at all, so switching to the shared EventDialog is a real (intentional, but
+> beyond the plan's literal Step 4 wording) capability change: editing a
+> recurring event from the dashboard agenda can now change the whole series,
+> and now asks which occurrences first, matching the other two pages. Flagged
+> here in case that capability change wasn't wanted on the dashboard
+> specifically.
+>
+> Branch: `phase/6-ui-conversion`, cut fresh from `dev` (Tasks 1-5 and the
+> paper theme are merged, so this branch no longer needs to stack on anything).
 
 ---
 
@@ -45,18 +79,19 @@ so the state ships with the work rather than trailing it.
 | 2   | Profile                                         | [x] done        |
 | 3   | Groups                                          | [x] done        |
 | 4   | Calendar list pages                             | [x] done        |
-| 5   | Extract the shared event dialog                 | [x] done*        |
-| 6   | Calendar page chrome                            | [ ] not started |
+| 5   | Extract the shared event dialog                 | [x] done*       |
+| 6   | Calendar page chrome                             | [x] done*       |
 | 7   | The landing page                                | [ ] not started |
 | 8   | Render dates in the viewer's timezone           | [ ] not started |
 | 9   | Delete the legacy bridge and the old primitives | [ ] not started |
 
-\* Task 5: manual recurrence-flow check (its Step 9) still outstanding - see above.
+\* Task 5 and Task 6: manual browser checks (Step 9 and Step 6 respectively) still outstanding - see above.
 
-**Checkpoint already passed:** the pause after Task 4 (before Task 5 rebuilt
-the calendar views) happened and the user said to continue. The next natural
-pause is after Task 6, once both calendar pages and Dashboard share one
-converted chrome.
+**Checkpoints already passed:** the pause after Task 4 (before Task 5 rebuilt
+the calendar views), and the pause after Task 6 (both calendar pages and
+Dashboard now share one converted chrome and one dialog) - the user said to
+continue each time. The next natural pause is after Task 9, when the legacy
+bridge is deleted and the conversion is fully done.
 
 ---
 
@@ -73,7 +108,7 @@ converted chrome.
 | —     | `fix/npm-lockfile`, `fix/calendars-overview-null-group`.                                           |
 | —     | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix.       |
 
-Test count at the last green run: **285 passing**.
+Test count at the last green run: **285 passing** (311 on `phase/7-team-visibility-and-messaging`, not yet merged).
 
 ---
 

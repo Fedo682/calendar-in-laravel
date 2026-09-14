@@ -1,4 +1,6 @@
+import EventPill from '@/components/Calendar/EventPill';
 import type { GridEvent } from '@/types/calendar';
+import { useEffect, useState } from 'react';
 
 interface DayViewProps {
     date: Date;
@@ -91,6 +93,15 @@ function layoutDayEvents(events: GridEvent[]): PositionedEvent[] {
     return positioned;
 }
 
+/** 12 AM, 1 AM, ... 11 PM. */
+function hourLabel(hour: number): string {
+    if (hour === 0) return '12 AM';
+    if (hour < 12) return `${hour} AM`;
+    if (hour === 12) return '12 PM';
+
+    return `${hour - 12} PM`;
+}
+
 export default function DayView({
     date,
     events,
@@ -98,20 +109,30 @@ export default function DayView({
     onSlotClick,
     onEventClick,
 }: DayViewProps) {
+    // Ticks every minute rather than freezing at the offset computed on the
+    // render that opened the view - otherwise the line stops representing
+    // "now" the moment it's drawn.
+    const [now, setNow] = useState(() => new Date());
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(new Date()), 60_000);
+
+        return () => clearInterval(id);
+    }, []);
+
     const dayEvents = events.filter((event) =>
         isSameDay(new Date(event.starts_at), date),
     );
     const allDayEvents = dayEvents.filter((event) => event.all_day);
     const timedEvents = dayEvents.filter((event) => !event.all_day);
     const positioned = layoutDayEvents(timedEvents);
-    const today = new Date();
-    const isToday = isSameDay(date, today);
-    const nowOffset = hoursSinceMidnight(today) * ROW_HEIGHT;
+    const isToday = isSameDay(date, now);
+    const nowOffset = hoursSinceMidnight(now) * ROW_HEIGHT;
 
     return (
-        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-                <h3 className="text-sm font-semibold text-gray-900">
+        <div className="border-hairline bg-surface rounded-card shadow-raised border">
+            <div className="border-hairline flex items-center justify-between border-b px-4 py-3">
+                <h3 className="text-headline text-content">
                     {date.toLocaleDateString(undefined, {
                         weekday: 'long',
                         month: 'long',
@@ -121,23 +142,22 @@ export default function DayView({
                 <button
                     type="button"
                     onClick={onClose}
-                    className="text-xs font-medium text-gray-500 hover:text-gray-800"
+                    className="text-content-secondary hover:text-content text-caption1 font-medium"
                 >
                     Back to month
                 </button>
             </div>
 
             {allDayEvents.length > 0 && (
-                <div className="flex flex-wrap gap-2 border-b border-gray-100 px-4 py-2">
+                <div className="border-hairline flex flex-wrap gap-2 border-b px-4 py-2">
                     {allDayEvents.map((event) => (
-                        <button
+                        <EventPill
                             key={event.key}
-                            type="button"
-                            onClick={() => onEventClick?.(event)}
-                            className="rounded bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-800 hover:bg-indigo-200"
-                        >
-                            {event.title} · All day
-                        </button>
+                            event={event}
+                            onClick={onEventClick}
+                            subtitle="All day"
+                            className="w-auto"
+                        />
                     ))}
                 </div>
             )}
@@ -153,30 +173,24 @@ export default function DayView({
                                 slot.setHours(hour, 0, 0, 0);
                                 onSlotClick?.(slot);
                             }}
-                            className="absolute right-0 left-0 flex w-full items-start border-t border-gray-100 text-left hover:bg-gray-50"
+                            className="border-hairline hover:bg-surface-raised absolute right-0 left-0 flex w-full items-start border-t text-left"
                             style={{
                                 top: hour * ROW_HEIGHT,
                                 height: ROW_HEIGHT,
                             }}
                         >
-                            <span className="w-14 shrink-0 -translate-y-2 pl-2 text-[11px] text-gray-400">
-                                {hour === 0
-                                    ? '12 AM'
-                                    : hour < 12
-                                      ? `${hour} AM`
-                                      : hour === 12
-                                        ? '12 PM'
-                                        : `${hour - 12} PM`}
+                            <span className="text-content-tertiary text-caption2 w-14 shrink-0 -translate-y-2 pl-2">
+                                {hourLabel(hour)}
                             </span>
                         </button>
                     ))}
 
                     {isToday && (
                         <div
-                            className="pointer-events-none absolute right-2 left-14 border-t-2 border-red-400"
+                            className="border-today pointer-events-none absolute right-2 left-14 border-t-2"
                             style={{ top: nowOffset }}
                         >
-                            <span className="absolute -top-1 -left-1 h-2 w-2 rounded-full bg-red-400" />
+                            <span className="bg-today absolute -top-1 -left-1 h-2 w-2 rounded-full" />
                         </div>
                     )}
 
@@ -194,18 +208,9 @@ export default function DayView({
                         const conflicted = columnCount > 1;
 
                         return (
-                            <button
+                            <div
                                 key={event.key}
-                                type="button"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEventClick?.(event);
-                                }}
-                                className={`absolute overflow-hidden rounded px-1.5 py-0.5 text-left text-xs shadow-sm ${
-                                    conflicted
-                                        ? 'border border-red-300 bg-red-100 text-red-800 hover:bg-red-200'
-                                        : 'border border-indigo-200 bg-indigo-100 text-indigo-800 hover:bg-indigo-200'
-                                }`}
+                                className="absolute"
                                 style={{
                                     top,
                                     height,
@@ -213,18 +218,32 @@ export default function DayView({
                                     width: `calc(${widthPct}% - ${column === columnCount - 1 ? '0.5rem' : '2px'})`,
                                 }}
                             >
-                                <span className="block truncate font-medium">
-                                    {event.title}
-                                </span>
-                                {height > 32 && (
-                                    <span className="block truncate text-[10px] opacity-80">
-                                        {start.toLocaleTimeString(undefined, {
-                                            hour: 'numeric',
-                                            minute: '2-digit',
-                                        })}
-                                    </span>
-                                )}
-                            </button>
+                                <EventPill
+                                    event={event}
+                                    onClick={onEventClick}
+                                    subtitle={
+                                        height > 32
+                                            ? start.toLocaleTimeString(
+                                                  undefined,
+                                                  {
+                                                      hour: 'numeric',
+                                                      minute: '2-digit',
+                                                  },
+                                              )
+                                            : undefined
+                                    }
+                                    // A conflicted block keeps its calendar's
+                                    // colour - that is what tells two
+                                    // different calendars apart - and gets a
+                                    // ring on top, the same signal the agenda
+                                    // list uses for a clash.
+                                    className={
+                                        conflicted
+                                            ? 'ring-danger h-full ring-2'
+                                            : 'h-full'
+                                    }
+                                />
+                            </div>
                         );
                     })}
                 </div>

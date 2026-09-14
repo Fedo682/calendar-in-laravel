@@ -1,5 +1,6 @@
 import DayView from '@/components/Calendar/DayView';
 import EventDialog from '@/components/Calendar/EventDialog';
+import { Badge, Button } from '@/components/ui';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
@@ -8,6 +9,7 @@ import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import type { CalendarEvent, Occurrence } from '@/types/calendar';
 import { usePageProps } from '@/types/shared';
 import { Head, Link } from '@inertiajs/react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 import { useState } from 'react';
 
@@ -188,58 +190,52 @@ export default function EventsIndex({
         <>
             <Head title={`${calendar.name} - ${group.name}`} />
 
-            <div className="py-8">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                    {selectedDay ? (
-                        <DayView
-                            date={selectedDay}
-                            events={occurrences}
-                            onClose={() => setSelectedDay(null)}
-                            onSlotClick={
-                                can_manage ? openCreateDialog : undefined
-                            }
-                            onEventClick={openEditDialog}
-                        />
-                    ) : (
-                        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={goToPrevMonth}
-                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                    >
-                                        ← Prev
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={goToToday}
-                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                    >
-                                        Today
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={goToNextMonth}
-                                        className="rounded-md border border-gray-300 px-3 py-1.5 text-sm transition hover:bg-gray-50"
-                                    >
-                                        Next →
-                                    </button>
-                                </div>
-                                <h3 className="text-base font-semibold text-gray-900">
+            <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+                {selectedDay ? (
+                    <DayView
+                        date={selectedDay}
+                        events={occurrences}
+                        onClose={() => setSelectedDay(null)}
+                        onSlotClick={can_manage ? openCreateDialog : undefined}
+                        onEventClick={openEditDialog}
+                    />
+                ) : (
+                    <>
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Previous month"
+                                    onClick={goToPrevMonth}
+                                >
+                                    <ChevronLeft className="size-4" />
+                                </Button>
+                                <Button variant="ghost" onClick={goToToday}>
+                                    Today
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    aria-label="Next month"
+                                    onClick={goToNextMonth}
+                                >
+                                    <ChevronRight className="size-4" />
+                                </Button>
+                                <h3 className="text-title3 text-content ms-2 font-semibold">
                                     {monthLabel}
                                 </h3>
                             </div>
-
-                            <MonthGrid
-                                month={month}
-                                events={occurrences}
-                                onDayClick={(date) => setSelectedDay(date)}
-                                onEventClick={openEditDialog}
-                            />
                         </div>
-                    )}
-                </div>
+
+                        <MonthGrid
+                            month={month}
+                            events={occurrences}
+                            onDayClick={(date) => setSelectedDay(date)}
+                            onEventClick={openEditDialog}
+                        />
+                    </>
+                )}
             </div>
 
             <EventDialog
@@ -270,22 +266,20 @@ function EventsHeading() {
     const { group, calendar, can_manage } = usePageProps<Props>();
 
     return (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
             <div>
-                <h2 className="text-xl leading-tight font-semibold text-gray-800">
+                <h2 className="text-headline text-chrome-content">
                     {calendar.name}
                 </h2>
-                <p className="text-sm text-gray-500">{group.name}</p>
+                <p className="text-chrome-content/70 text-footnote">
+                    {group.name}
+                </p>
             </div>
             <div className="flex items-center gap-3">
-                {!can_manage && (
-                    <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
-                        View only
-                    </span>
-                )}
+                {!can_manage && <Badge>View only</Badge>}
                 <Link
                     href={`/groups/${group.id}/calendars`}
-                    className="text-sm font-medium text-gray-500 hover:text-gray-800"
+                    className="text-chrome-content/70 hover:text-chrome-content text-footnote font-medium"
                 >
                     Back to calendars
                 </Link>
