@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Support\Calendar\ConflictDetector;
 use App\Support\Calendar\Occurrence;
 use App\Support\Calendar\OccurrenceQuery;
@@ -27,13 +28,26 @@ class DashboardController extends Controller
         $month = $this->month($request);
         [$gridFrom, $gridTo] = $this->gridRange($month);
 
+        $scheduleIds = $user->scheduleCalendarIds();
+
         // Two windows, two queries. The grid covers the month on screen; the
         // agenda beside it covers the next few days, which is a different
         // question and almost never the same set of events.
-        $monthOccurrences = $this->occurrences->forUser($user, $gridFrom, $gridTo);
+        $monthOccurrences = $this->occurrences->forCalendars($scheduleIds, $gridFrom, $gridTo, $user);
 
-        $upcoming = $this->occurrences->forUser($user, now(), now()->addDays($windowDays));
-        $conflicts = $this->conflicts->detect($upcoming);
+        $upcoming = $this->occurrences->forCalendars($scheduleIds, now(), now()->addDays($windowDays), $user);
+
+        // Conflicts are checked over a narrower set than the grid displays:
+        // personalCalendarIds() has no Super Admin escalation, so two
+        // unrelated groups' events no longer read as "conflicting" just
+        // because a platform role can see both of them.
+        $conflictCandidates = $this->occurrences->forCalendars(
+            $user->personalCalendarIds(),
+            now(),
+            now()->addDays($windowDays),
+            $user,
+        );
+        $conflicts = $this->conflicts->detect($conflictCandidates);
 
         return Inertia::render('Dashboard', [
             'month' => $month->toDateString(),
@@ -56,7 +70,32 @@ class DashboardController extends Controller
             })->values(),
             'window_days' => $windowDays,
             'writable_calendars' => $this->writable->options($user),
+            'team_busy' => $this->teamBusyPayload($user, $windowDays),
         ]);
+    }
+
+    /**
+     * @return list<array{group_id: int, group_name: string, busy_count: int, occurrences: list<array<string, mixed>>}>
+     */
+    private function teamBusyPayload(User $user, int $windowDays): array
+    {
+        return $user->teamBusyByGroup()->map(function (array $entry) use ($user, $windowDays) {
+            $occurrences = $entry['calendar_ids']->isEmpty()
+                ? collect()
+                : $this->occurrences->forCalendars(
+                    $entry['calendar_ids'],
+                    now(),
+                    now()->addDays($windowDays),
+                    $user,
+                );
+
+            return [
+                'group_id' => $entry['group']->id,
+                'group_name' => $entry['group']->name,
+                'busy_count' => $occurrences->count(),
+                'occurrences' => $occurrences->map(fn (Occurrence $o) => $o->toArray())->values()->all(),
+            ];
+        })->values()->all();
     }
 
     /**
