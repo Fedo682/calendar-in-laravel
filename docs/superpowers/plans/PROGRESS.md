@@ -11,18 +11,37 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **Next (higher priority than the UI conversion plan below):** the user
-> asked for team busy-visibility, conflict scoping, a CEO/team-busy panel,
-> and member-to-admin messaging, to be finished **before** resuming Task 7.
-> Design spec written and approved by the user; awaiting the user's review
-> of the written spec file before `superpowers:writing-plans` is invoked:
-> `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`.
+> **Team busy-visibility, conflict scoping, the team-busy panel, and
+> member-to-admin messaging are implemented, tested, and passing all four
+> gates.** Spec: `docs/superpowers/specs/2026-09-14-team-busy-visibility-and-messaging-design.md`.
+> Plan: `docs/superpowers/plans/2026-09-14-team-busy-visibility-and-messaging.md`
+> (all 9 tasks done). Branch: `phase/7-team-visibility-and-messaging`, stacked
+> on `phase/6-ui-conversion` (not on `dev` - `dev` does not yet contain that
+> branch's Dashboard/Events/Personal conversion this feature's frontend
+> builds on). Not yet merged or PR'd - both branches still need their own
+> checkpoint/PR, in order (`phase/6-ui-conversion` first, then this one
+> rebased onto the resulting `dev`).
 >
-> Once that feature is planned, implemented, tested and merged, resume the
-> paper UI conversion plan at **Task 7 of the paper UI conversion — the
-> landing page.**
+> **One known gap, found while wiring the frontend:** the "Message" button's
+> `messagedIds` is local React state, so a "Messaged" row reverts to
+> "Message" on page reload even though the server-side dedup still silently
+> blocks a second send (it just redirects with a flash error instead of
+> visibly failing). A future pass could have the server tell the client
+> which occurrences this viewer has already messaged, so the button state
+> survives a reload. Not blocking - the dedup is enforced either way - but
+> worth fixing before this feels finished.
 >
-> **Two manual browser checks are still outstanding, neither performed** - no
+> **One manual browser check outstanding for this feature, not performed** -
+> no browser automation is available in this session: click "Message" on an
+> agenda row for a group event you can't edit, send a message, confirm the
+> dialog closes and the button reads "Messaged". Covered at the HTTP level
+> by `tests/Feature/EventMessageTest.php`, not yet clicked through by hand.
+>
+> **After that branch is merged, resume the paper UI conversion plan at
+> Task 7 — the landing page.**
+>
+> **Two manual browser checks from the UI conversion plan are still
+> outstanding, neither performed** - no
 > browser automation is available in this session:
 > 1. Task 5's Step 9: edit one occurrence of a recurring event, choose "This
 >    event" in the scope prompt, confirm only that occurrence changed.
@@ -89,7 +108,7 @@ bridge is deleted and the conversion is fully done.
 | —     | `fix/npm-lockfile`, `fix/calendars-overview-null-group`.                                           |
 | —     | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix.       |
 
-Test count at the last green run: **285 passing**.
+Test count at the last green run: **285 passing** (311 on `phase/7-team-visibility-and-messaging`, not yet merged).
 
 ---
 
