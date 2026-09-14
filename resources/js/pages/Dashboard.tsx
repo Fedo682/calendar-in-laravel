@@ -1,4 +1,5 @@
 import EventDialog from '@/components/Calendar/EventDialog';
+import EventMessageDialog from '@/components/Calendar/EventMessageDialog';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
@@ -21,6 +22,13 @@ interface UpcomingEvent extends Occurrence {
     conflicts_with: string[];
 }
 
+interface TeamBusyGroup {
+    group_id: number;
+    group_name: string;
+    busy_count: number;
+    occurrences: Occurrence[];
+}
+
 interface DashboardProps {
     /** First of the month the grid is showing, as YYYY-MM-DD. */
     month: string;
@@ -28,6 +36,7 @@ interface DashboardProps {
     upcoming_events: UpcomingEvent[];
     window_days: number;
     writable_calendars: WritableCalendar[];
+    team_busy: TeamBusyGroup[];
 }
 
 function formatDayHeading(date: Date): string {
@@ -106,6 +115,7 @@ export default function Dashboard() {
         upcoming_events: upcoming,
         window_days: windowDays,
         writable_calendars: writableCalendars,
+        team_busy: teamBusy,
     } = usePageProps<DashboardProps>();
 
     const monthDate = new Date(`${month}T00:00:00`);
@@ -114,6 +124,13 @@ export default function Dashboard() {
     ).length;
 
     const [reportedIds, setReportedIds] = useState<number[]>([]);
+    const [messagedIds, setMessagedIds] = useState<number[]>([]);
+    const [messagingEvent, setMessagingEvent] = useState<UpcomingEvent | null>(
+        null,
+    );
+    const [expandedTeams, setExpandedTeams] = useState<Set<number>>(
+        new Set(),
+    );
     const [dialogMode, setDialogMode] = useState<'create' | 'edit' | null>(
         null,
     );
@@ -237,6 +254,20 @@ export default function Dashboard() {
         form.post(target.create_url, {
             preserveScroll: true,
             onSuccess: () => closeDialog(),
+        });
+    };
+
+    const toggleTeam = (groupId: number) => {
+        setExpandedTeams((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(groupId)) {
+                next.delete(groupId);
+            } else {
+                next.add(groupId);
+            }
+
+            return next;
         });
     };
 
@@ -415,7 +446,7 @@ export default function Dashboard() {
                                                                 )}
                                                             </div>
 
-                                                            <div className="shrink-0">
+                                                            <div className="flex shrink-0 items-center gap-2">
                                                                 {event.can_edit &&
                                                                 !event.is_redacted ? (
                                                                     <Button
@@ -430,31 +461,54 @@ export default function Dashboard() {
                                                                         Edit
                                                                     </Button>
                                                                 ) : (
-                                                                    event
-                                                                        .conflicts_with
-                                                                        .length >
-                                                                        0 &&
-                                                                    event.group_id !==
-                                                                        null &&
-                                                                    (reportedIds.includes(
-                                                                        event.event_id,
-                                                                    ) ? (
-                                                                        <span className="text-content-tertiary text-caption1">
-                                                                            Reported
-                                                                        </span>
-                                                                    ) : (
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            onClick={() =>
-                                                                                reportConflict(
-                                                                                    event,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            Report
-                                                                        </Button>
-                                                                    ))
+                                                                    <>
+                                                                        {event.group_id !==
+                                                                            null &&
+                                                                            (messagedIds.includes(
+                                                                                event.event_id,
+                                                                            ) ? (
+                                                                                <span className="text-content-tertiary text-caption1">
+                                                                                    Messaged
+                                                                                </span>
+                                                                            ) : (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() =>
+                                                                                        setMessagingEvent(
+                                                                                            event,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Message
+                                                                                </Button>
+                                                                            ))}
+                                                                        {event
+                                                                            .conflicts_with
+                                                                            .length >
+                                                                            0 &&
+                                                                            event.group_id !==
+                                                                                null &&
+                                                                            (reportedIds.includes(
+                                                                                event.event_id,
+                                                                            ) ? (
+                                                                                <span className="text-content-tertiary text-caption1">
+                                                                                    Reported
+                                                                                </span>
+                                                                            ) : (
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() =>
+                                                                                        reportConflict(
+                                                                                            event,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    Report
+                                                                                </Button>
+                                                                            ))}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -466,6 +520,82 @@ export default function Dashboard() {
                                 </div>
                             )}
                         </Card>
+
+                        {teamBusy.length > 0 && (
+                            <Card material="thin" padded={false}>
+                                <h3 className="border-hairline text-headline text-content border-b px-4 py-3">
+                                    Team busy
+                                </h3>
+                                <div className="divide-hairline divide-y">
+                                    {teamBusy.map((team) => {
+                                        const expanded = expandedTeams.has(
+                                            team.group_id,
+                                        );
+
+                                        return (
+                                            <div key={team.group_id}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        toggleTeam(
+                                                            team.group_id,
+                                                        )
+                                                    }
+                                                    className="hover:bg-surface-raised flex w-full items-center justify-between px-4 py-3 text-start"
+                                                >
+                                                    <span className="text-content text-footnote font-medium">
+                                                        {team.group_name} -{' '}
+                                                        {team.busy_count} busy
+                                                    </span>
+                                                    <ChevronRight
+                                                        className={`text-content-tertiary size-4 shrink-0 transition-transform ${
+                                                            expanded
+                                                                ? 'rotate-90'
+                                                                : ''
+                                                        }`}
+                                                    />
+                                                </button>
+                                                {expanded && (
+                                                    <ul className="space-y-2 px-4 pb-3">
+                                                        {team.occurrences
+                                                            .length === 0 ? (
+                                                            <li className="text-content-tertiary text-caption1">
+                                                                Nothing
+                                                                scheduled.
+                                                            </li>
+                                                        ) : (
+                                                            team.occurrences.map(
+                                                                (
+                                                                    occurrence,
+                                                                ) => (
+                                                                    <li
+                                                                        key={
+                                                                            occurrence.key
+                                                                        }
+                                                                    >
+                                                                        <p className="text-content text-footnote">
+                                                                            Busy
+                                                                            {occurrence.owner_name
+                                                                                ? ` - ${occurrence.owner_name}`
+                                                                                : ''}
+                                                                        </p>
+                                                                        <p className="text-content-tertiary text-caption1">
+                                                                            {formatTimeRange(
+                                                                                occurrence,
+                                                                            )}
+                                                                        </p>
+                                                                    </li>
+                                                                ),
+                                                            )
+                                                        )}
+                                                    </ul>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </Card>
+                        )}
                     </aside>
                 </div>
             </div>
@@ -501,6 +631,23 @@ export default function Dashboard() {
                 onCancel={() => setScopePrompt(null)}
                 onConfirm={(scope) => saveWithScope(scope)}
             />
+
+            {messagingEvent && (
+                <EventMessageDialog
+                    open={messagingEvent !== null}
+                    onClose={() => setMessagingEvent(null)}
+                    onSent={() =>
+                        setMessagedIds((ids) => [
+                            ...ids,
+                            messagingEvent.event_id,
+                        ])
+                    }
+                    groupId={messagingEvent.group_id!}
+                    calendarId={messagingEvent.calendar_id}
+                    eventId={messagingEvent.event_id}
+                    occurrenceStart={messagingEvent.starts_at}
+                />
+            )}
         </>
     );
 }

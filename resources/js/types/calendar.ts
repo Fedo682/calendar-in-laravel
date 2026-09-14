@@ -92,6 +92,8 @@ export interface Occurrence extends CalendarEvent {
     calendar_color: string | null;
     /** Null for events on a personal calendar. */
     group_name: string | null;
+    /** Set only for a redacted event on someone's personal calendar - "Busy - Jane Smith". */
+    owner_name: string | null;
 }
 
 /**
