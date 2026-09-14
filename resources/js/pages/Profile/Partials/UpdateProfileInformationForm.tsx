@@ -1,8 +1,4 @@
-import InputError from '@/components/InputError';
-import InputLabel from '@/components/InputLabel';
-import PrimaryButton from '@/components/PrimaryButton';
-import TextInput from '@/components/TextInput';
-import { cn } from '@/lib/utils';
+import { Button, Field, Input, Select } from '@/components/ui';
 import { Transition } from '@headlessui/react';
 import { Link, router, useForm } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
@@ -14,7 +10,6 @@ interface UpdateProfileInformationProps {
     mustVerifyEmail: boolean;
     status?: string;
     timezoneOptions: TimezoneGroup[];
-    className?: string;
 }
 
 interface ProfileForm {
@@ -37,10 +32,6 @@ const WEEK_DAYS = [
     'Saturday',
 ];
 
-/** Mirrors the classes `TextInput` applies, so selects line up with inputs. */
-const SELECT_CLASS =
-    'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500';
-
 /**
  * The zone this browser is actually in, or null where `Intl` cannot say.
  *
@@ -59,7 +50,6 @@ export default function UpdateProfileInformation({
     mustVerifyEmail,
     status,
     timezoneOptions,
-    className = '',
 }: UpdateProfileInformationProps) {
     // This form only ever renders behind auth, so `user` is non-null here -
     // narrowing it via the generic beats an assertion.
@@ -104,79 +94,73 @@ export default function UpdateProfileInformation({
     };
 
     return (
-        <section className={className}>
+        <section>
             <header>
-                <h2 className="text-lg font-medium text-gray-900">
-                    Profile Information
+                <h2 className="text-headline text-content">
+                    Profile information
                 </h2>
 
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="text-content-secondary text-footnote mt-1">
                     Update your account's profile information and email address.
                 </p>
             </header>
 
-            <form onSubmit={submit} className="mt-6 space-y-6">
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
-                    <TextInput
+            <form onSubmit={submit} className="mt-6 space-y-4">
+                <Field label="Name" error={errors.name} required>
+                    <Input
                         id="name"
-                        className="mt-1 block w-full"
                         value={data.name}
                         onChange={(e) => setData('name', e.target.value)}
                         required
-                        isFocused
+                        autoFocus
                         autoComplete="name"
+                        invalid={Boolean(errors.name)}
                     />
+                </Field>
 
-                    <InputError className="mt-2" message={errors.name} />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
+                <Field label="Email" error={errors.email} required>
+                    <Input
                         id="email"
                         type="email"
-                        className="mt-1 block w-full"
                         value={data.email}
                         onChange={(e) => setData('email', e.target.value)}
                         required
                         autoComplete="username"
+                        invalid={Boolean(errors.email)}
                     />
-
-                    <InputError className="mt-2" message={errors.email} />
-                </div>
+                </Field>
 
                 {mustVerifyEmail && user.email_verified_at === null && (
                     <div>
-                        <p className="mt-2 text-sm text-gray-800">
-                            Your email address is unverified.
+                        <p className="text-content text-footnote mt-2">
+                            Your email address is unverified.{' '}
                             <Link
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
-                                className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+                                className="text-content-secondary hover:text-content focus-visible:outline-accent rounded-control underline focus-visible:outline-2"
                             >
                                 Click here to re-send the verification email.
                             </Link>
                         </p>
 
                         {status === 'verification-link-sent' && (
-                            <div className="mt-2 text-sm font-medium text-green-600">
+                            <p className="text-success text-footnote mt-2 font-medium">
                                 A new verification link has been sent to your
                                 email address.
-                            </div>
+                            </p>
                         )}
                     </div>
                 )}
 
-                <div>
-                    <InputLabel htmlFor="timezone" value="Timezone" />
-
-                    <select
+                <Field
+                    label="Timezone"
+                    error={errors.timezone}
+                    hint="Times are stored in UTC and shown in this zone, including in calendar feeds you subscribe to."
+                    required
+                >
+                    <Select
                         id="timezone"
-                        className={SELECT_CLASS}
                         value={data.timezone}
                         onChange={(e) => setData('timezone', e.target.value)}
                         required
@@ -190,43 +174,27 @@ export default function UpdateProfileInformation({
                                 ))}
                             </optgroup>
                         ))}
-                    </select>
+                    </Select>
+                </Field>
 
-                    <p className="mt-1 text-sm text-gray-600">
-                        Times are stored in UTC and shown in this zone,
-                        including in calendar feeds you subscribe to.
-                    </p>
+                {zoneMismatch && (
+                    <div className="bg-accent-soft text-content rounded-card text-footnote p-3">
+                        This device looks like it is in{' '}
+                        <span className="font-medium">{browserZone}</span>.{' '}
+                        <button
+                            type="button"
+                            onClick={useBrowserZone}
+                            disabled={processing}
+                            className="text-accent hover:text-accent-hover focus-visible:outline-accent rounded-control font-medium underline focus-visible:outline-2 disabled:opacity-50"
+                        >
+                            Use {browserZone} instead
+                        </button>
+                    </div>
+                )}
 
-                    <InputError className="mt-2" message={errors.timezone} />
-
-                    {zoneMismatch && (
-                        <div className="mt-2 rounded-md bg-indigo-50 p-3 text-sm text-indigo-900">
-                            This device looks like it is in{' '}
-                            <span className="font-medium">{browserZone}</span>.
-                            <button
-                                type="button"
-                                onClick={useBrowserZone}
-                                disabled={processing}
-                                className={cn(
-                                    'ml-2 font-medium underline hover:text-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
-                                    processing && 'opacity-50',
-                                )}
-                            >
-                                Use {browserZone} instead
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                <div>
-                    <InputLabel
-                        htmlFor="week_starts_on"
-                        value="Week starts on"
-                    />
-
-                    <select
+                <Field label="Week starts on" error={errors.week_starts_on}>
+                    <Select
                         id="week_starts_on"
-                        className={SELECT_CLASS}
                         value={data.week_starts_on}
                         onChange={(e) =>
                             setData('week_starts_on', Number(e.target.value))
@@ -237,32 +205,24 @@ export default function UpdateProfileInformation({
                                 {day}
                             </option>
                         ))}
-                    </select>
+                    </Select>
+                </Field>
 
-                    <InputError
-                        className="mt-2"
-                        message={errors.week_starts_on}
-                    />
-                </div>
-
-                <div>
-                    <InputLabel htmlFor="time_format" value="Time format" />
-
-                    <select
+                <Field label="Time format" error={errors.time_format}>
+                    <Select
                         id="time_format"
-                        className={SELECT_CLASS}
                         value={data.time_format}
                         onChange={(e) => setData('time_format', e.target.value)}
                     >
                         <option value="12h">12-hour (1:30 PM)</option>
                         <option value="24h">24-hour (13:30)</option>
-                    </select>
+                    </Select>
+                </Field>
 
-                    <InputError className="mt-2" message={errors.time_format} />
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                <div className="flex items-center gap-4 pt-2">
+                    <Button type="submit" loading={processing}>
+                        Save
+                    </Button>
 
                     <Transition
                         show={recentlySuccessful}
@@ -271,7 +231,9 @@ export default function UpdateProfileInformation({
                         leave="transition ease-in-out"
                         leaveTo="opacity-0"
                     >
-                        <p className="text-sm text-gray-600">Saved.</p>
+                        <p className="text-content-secondary text-footnote">
+                            Saved.
+                        </p>
                     </Transition>
                 </div>
             </form>
