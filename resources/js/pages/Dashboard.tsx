@@ -3,7 +3,10 @@ import EventMessageDialog from '@/components/Calendar/EventMessageDialog';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
-import { useEventForm } from '@/components/Calendar/useEventForm';
+import {
+    useEventForm,
+    withUtcOffsets,
+} from '@/components/Calendar/useEventForm';
 import { Badge, Button, Card, EmptyState } from '@/components/ui';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import { nowInZone, toViewerZone, useViewerZone } from '@/lib/datetime';
@@ -225,7 +228,10 @@ export default function Dashboard() {
     const saveWithScope = (scope: RecurrenceScope) => {
         if (!editing) return;
 
-        form.transform((data) => ({ ...data, scope }));
+        form.transform((data) => ({
+            ...withUtcOffsets(data, timezone),
+            scope,
+        }));
 
         form.put(eventUrl(editing), {
             preserveScroll: true,
@@ -259,9 +265,12 @@ export default function Dashboard() {
         // The picker chooses which endpoint to post to rather than sending a
         // calendar id to a generic one, so the create authorises through the
         // route that owns that calendar.
+        form.transform((data) => withUtcOffsets(data, timezone));
+
         form.post(target.create_url, {
             preserveScroll: true,
             onSuccess: () => closeDialog(),
+            onFinish: () => form.transform((data) => data),
         });
     };
 

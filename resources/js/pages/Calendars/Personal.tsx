@@ -4,7 +4,10 @@ import { Button, Card } from '@/components/ui';
 import MonthGrid from '@/components/Calendar/MonthGrid';
 import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialog';
 import RecurrenceScopeDialog from '@/components/Calendar/RecurrenceScopeDialog';
-import { useEventForm } from '@/components/Calendar/useEventForm';
+import {
+    useEventForm,
+    withUtcOffsets,
+} from '@/components/Calendar/useEventForm';
 import AuthenticatedLayout from '@/layouts/AuthenticatedLayout';
 import { nowInZone } from '@/lib/datetime';
 import type { CalendarEvent, Occurrence } from '@/types/calendar';
@@ -81,7 +84,10 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
 
         // transform() mutates the form rather than returning it, so the scope
         // is applied and then reset once the request has been sent.
-        form.transform((data) => ({ ...data, scope }));
+        form.transform((data) => ({
+            ...withUtcOffsets(data, timezone),
+            scope,
+        }));
 
         form.put(`/calendars/personal/events/${editingEvent.event_id}`, {
             preserveScroll: true,
@@ -123,9 +129,12 @@ export default function PersonalCalendarPage({ calendar, occurrences }: Props) {
             return;
         }
 
+        form.transform((data) => withUtcOffsets(data, timezone));
+
         form.post('/calendars/personal/events', {
             preserveScroll: true,
             onSuccess: () => closeDialog(),
+            onFinish: () => form.transform((data) => data),
         });
     };
 

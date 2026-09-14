@@ -2,7 +2,7 @@ import type { RecurrenceScope } from '@/components/Calendar/RecurrenceScopeDialo
 import type { Occurrence, Visibility } from '@/types/calendar';
 import type { InertiaFormProps } from '@inertiajs/react';
 import { useForm } from '@inertiajs/react';
-import { toViewerZone } from '@/lib/datetime';
+import { localInputValueToUtcIso, toViewerZone } from '@/lib/datetime';
 import { addHours, set } from 'date-fns';
 
 /**
@@ -125,4 +125,27 @@ export function useEventForm(
     };
 
     return { form, openCreate, openEdit, reset };
+}
+
+/**
+ * Apply right before a create/update request is sent - never to what the
+ * dialog's inputs display, which must stay the naive strings a
+ * `datetime-local` input binds to.
+ *
+ * `starts_at`/`ends_at` hold that naive "wall clock in the viewer's zone"
+ * value for as long as the dialog is open. Sent as-is, the backend's date
+ * cast would parse them as the app's own configured zone (UTC) rather than
+ * the viewer's - this rewrites them into unambiguous offset-bearing
+ * instants first, the same way `saveWithScope`'s callers already inject
+ * `scope` right before the same request via `form.transform()`.
+ */
+export function withUtcOffsets(
+    data: EventFormData,
+    timezone: string,
+): EventFormData {
+    return {
+        ...data,
+        starts_at: localInputValueToUtcIso(data.starts_at, timezone),
+        ends_at: localInputValueToUtcIso(data.ends_at, timezone),
+    };
 }
