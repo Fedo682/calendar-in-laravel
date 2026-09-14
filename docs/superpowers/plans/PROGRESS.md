@@ -1,0 +1,96 @@
+# Progress
+
+Live execution state. **Read this first when resuming** — sessions have been
+cut off by rate limits three times, and this is the only place the current task
+position is recorded.
+
+Update the checkbox and the "Resume here" line as part of each task's commit,
+so the state ships with the work rather than trailing it.
+
+---
+
+## Resume here
+
+> **Next:** Task 1 of the paper UI conversion — auth pages and the guest layout.
+> Nothing started yet.
+>
+> Branch: not yet created. Cut `phase/6-ui-conversion` from the tip of `dev`.
+
+---
+
+## Plan being executed
+
+`docs/superpowers/plans/2026-09-14-paper-ui-conversion.md`
+
+| # | Task | State |
+|---|---|---|
+| 1 | Auth pages and the guest layout | [ ] not started |
+| 2 | Profile | [ ] not started |
+| 3 | Groups | [ ] not started |
+| 4 | Calendar list pages | [ ] not started |
+| 5 | Extract the shared event dialog | [ ] not started |
+| 6 | Calendar page chrome | [ ] not started |
+| 7 | The landing page | [ ] not started |
+| 8 | Render dates in the viewer's timezone | [ ] not started |
+| 9 | Delete the legacy bridge and the old primitives | [ ] not started |
+
+**Checkpoint:** stop after Task 4 for review before the calendar views are
+rebuilt.
+
+---
+
+## Done and merged to `dev`
+
+| Phase | What |
+|---|---|
+| 0 | Seams — enums, config, observer, shared props. Fixed dead `flash` toasts and duplicate middleware. |
+| 1 | Vite/TS consolidation. Fixed a genuinely broken production build (clean checkout was 67/92). |
+| 2 | Per-user timezone, theme, week start, time format + `PATCH /profile/appearance`. |
+| 3 | `events.visibility`, personal calendars, the `EventRedactor` chokepoint. Closed two real leaks. |
+| 4 | Recurrence — RRULE storage, DST-correct expansion, overrides, this/following/all editing. |
+| 5 | Design system foundation — tokens, materials, 22 primitives, `AppShell`, `/styleguide`. |
+| — | `fix/npm-lockfile`, `fix/calendars-overview-null-group`. |
+| — | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix. |
+
+Test count at the last green run: **285 passing**.
+
+---
+
+## Still to come after this plan
+
+- **ICS feed** — per-user secret-token URL, `sabre/vobject` with real
+  VTIMEZONE, ETag/304 caching, a "Subscribed devices" revoke list.
+  **Depends on Task 8** of the current plan (viewer timezone), or subscribers
+  see events at the wrong hour.
+- **Google two-way sync** — six incremental steps, OAuth through to the
+  conflict audit UI. Against the REST API via the `Http` facade, because
+  neither `google/apiclient` nor `laravel/socialite` supports Guzzle 8.
+  Google's calendar scopes are *sensitive*, so OAuth verification takes weeks —
+  worth starting the application early.
+
+## Known gaps, deliberately deferred
+
+- **The month grid shows an event only on its start day** — no multi-day
+  spanning. A functional change rather than a conversion, so it needs its own
+  plan.
+- `GroupController@show` ships raw Eloquent models to Inertia.
+- `types/auth.ts`'s `User` has an index signature that quietly defeats
+  type-checking on user fields.
+- **Open question for the user:** whether to add `@php artisan migrate
+  --graceful` to the `dev` composer script. `composer dev` does not migrate,
+  and that has broken their local app twice after a merge.
+
+---
+
+## Before trusting any test run
+
+```
+composer test          # pint + phpstan (needs --memory-limit=1G) + pest
+npm run check
+npm run types:check
+npm run build
+```
+
+`public/hot` must be **absent** — while it exists Laravel serves from the Vite
+dev server and never reads the build manifest, which hides page-render
+failures. Run `php`, `composer` and `npm` from PowerShell, not Git Bash.
