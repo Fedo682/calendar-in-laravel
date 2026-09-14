@@ -4,13 +4,19 @@ import type { ReactNode } from 'react';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
+import type { TimezoneGroup } from './types';
 
 interface EditProps {
     mustVerifyEmail: boolean;
     status?: string;
+    timezoneOptions: TimezoneGroup[];
 }
 
-export default function Edit({ mustVerifyEmail, status }: EditProps) {
+export default function Edit({
+    mustVerifyEmail,
+    status,
+    timezoneOptions,
+}: EditProps) {
     return (
         <>
             <Head title="Profile" />
@@ -21,6 +27,7 @@ export default function Edit({ mustVerifyEmail, status }: EditProps) {
                         <UpdateProfileInformationForm
                             mustVerifyEmail={mustVerifyEmail}
                             status={status}
+                            timezoneOptions={timezoneOptions}
                             className="max-w-xl"
                         />
                     </div>

@@ -19,17 +19,17 @@ use Illuminate\Support\Collection;
  * @property string $name
  * @property string $email
  * @property Carbon|null $email_verified_at
- * @property string|null $timezone IANA identifier; added by the user-preferences migration.
- * @property string|null $theme system|light|dark; added by the user-preferences migration.
- * @property int|null $week_starts_on 0=Sunday; added by the user-preferences migration.
- * @property string|null $time_format 12h|24h; added by the user-preferences migration.
+ * @property string $timezone IANA identifier.
+ * @property string $theme system|light|dark.
+ * @property int $week_starts_on 0=Sunday.
+ * @property string $time_format 12h|24h.
  * @property string $password
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read GroupUser $pivot Only set when loaded via Group::members()/User::memberGroups().
  */
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'timezone', 'theme', 'week_starts_on', 'time_format'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -48,7 +48,28 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            // Without this the column comes back as a string on SQLite, which
+            // breaks strict comparisons against the 0-6 day index.
+            'week_starts_on' => 'integer',
         ];
+    }
+
+    /**
+     * The zone this user's times should be rendered in.
+     *
+     * Everything is stored in UTC; this is the only place a display zone is
+     * resolved, so callers never have to decide what to do about a blank or
+     * unrecognised identifier.
+     */
+    public function viewerZone(): \DateTimeZone
+    {
+        try {
+            return new \DateTimeZone($this->timezone);
+        } catch (\Exception) {
+            // Validation keeps this from happening, but a row edited outside
+            // the app must not take a page down.
+            return new \DateTimeZone('UTC');
+        }
     }
 
     /**
