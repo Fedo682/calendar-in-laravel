@@ -93,6 +93,9 @@ final readonly class RedactedEvent
      */
     public function uid(string $host): string
     {
-        return sprintf('event-%d@%s', $this->id, $host);
+        // An override's own row id is not its series' id - a calendar
+        // client has to see the same UID on both to associate "this
+        // changed instance" with "that recurring series."
+        return sprintf('event-%d@%s', $this->recurrenceParentId ?? $this->id, $host);
     }
 }
