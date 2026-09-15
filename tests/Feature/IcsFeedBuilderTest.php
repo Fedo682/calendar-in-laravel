@@ -28,6 +28,22 @@ test('the output parses as valid ICS', function () {
         ->not->toContain('METHOD:');
 });
 
+test('PRODID appears exactly once', function () {
+    // VCalendar's own constructor already defaults a PRODID in - adding a
+    // second one via add() appends rather than replacing, which is invalid
+    // per RFC 5545 (PRODID must appear exactly once) and was only caught by
+    // fetching the feed over real HTTP and reading the raw output by hand.
+    $group = Group::factory()->create();
+    $user = User::factory()->create();
+    asGroupRole($group, $user, 'admin');
+    $calendar = Calendar::factory()->create(['group_id' => $group->id]);
+    Event::factory()->create(['calendar_id' => $calendar->id]);
+
+    $ics = app(IcsFeedBuilder::class)->build($user);
+
+    expect(substr_count($ics, 'PRODID:'))->toBe(1);
+});
+
 test('a private event is redacted in the feed', function () {
     $group = Group::factory()->create();
     $owner = User::factory()->create();

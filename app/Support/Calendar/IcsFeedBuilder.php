@@ -24,8 +24,12 @@ final class IcsFeedBuilder
 
         $redacted = $this->occurrences->mastersFor($user, $from, $to);
 
-        $calendar = new VCalendar;
-        $calendar->add('PRODID', '-//GroupSync Calendar//ICS Feed//EN');
+        // PRODID is one of VCalendar's own constructor defaults (alongside
+        // VERSION and CALSCALE) - passed as the constructor's own $children
+        // array, it overrides that default instead of duplicating it the
+        // way a later $calendar->add('PRODID', ...) call would (add() only
+        // ever appends a new property, never replaces an existing one).
+        $calendar = new VCalendar(['PRODID' => '-//GroupSync Calendar//ICS Feed//EN']);
         $calendar->add('X-WR-CALNAME', $user->name.' - GroupSync Calendar');
         $calendar->add('X-PUBLISHED-TTL', (string) config('calendar.ics.refresh_interval'));
 
