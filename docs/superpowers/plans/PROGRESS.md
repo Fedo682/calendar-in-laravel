@@ -11,103 +11,85 @@ so the state ships with the work rather than trailing it.
 
 ## Resume here
 
-> **The paper UI conversion plan is fully done - all 9 tasks complete, the
-> legacy bridge and pre-design-system primitives deleted.** Merged to `dev`
-> via PR #12 (branch was `phase/7-landing-page`, name stale - it ended up
-> carrying Tasks 7, 8 and 9). See "Still to come" below for what's next
-> (ICS feed is now unblocked - Task 8 landed).
+> **The ICS subscription feed** (spec: `docs/superpowers/specs/2026-09-15-ics-feed-design.md`,
+> plan: `docs/superpowers/plans/2026-09-15-ics-feed.md`) **is implemented,
+> all 7 tasks done, all four gates green (341 tests).** Branch:
+> `feature/ics-feed`, cut from `dev`. Not yet merged or PR'd.
 >
-> **A second, independent branch is queued up right behind it:
-> `feature/group-messages-inbox`**, cut from `dev` before PR #12 landed, so
-> it needed a rebase to pick up Tasks 7-9 before it could merge cleanly
-> (this file's own "Resume here" section was the only conflict - both
-> branches touched it independently). Adds an admin-facing "Messages" page
-> per group (`/groups/{group}/messages`) so a group admin can actually see
-> what `event_messages` rows the existing report-conflict/message-admin
-> actions were creating - split into "Messages" and "Reports", each event
-> redacted normally for the viewer, with a resolved/unresolved toggle and a
-> link into the event's calendar. All four gates green (317 tests). Not yet
-> merged.
+> A `calendar_feed_tokens` table + `CalendarFeedTokenService` back a
+> `GET /feed/{token}.ics` route (the app's first unauthenticated route -
+> stripped of session/CSRF/Inertia middleware) serving a `VCALENDAR` built by
+> `IcsFeedBuilder` from `OccurrenceQuery::mastersFor()` - already redacted,
+> already unexpanded. An ETag fingerprint (`IcsFeedCache`) 304s a repeat poll
+> without touching vobject. `Settings/Integrations.tsx` (new, linked from the
+> avatar menu) lets a user generate/copy/revoke their feed URL.
 >
-> **Task 8 turned out to need more than its own file list said.** Its
-> plan only listed `lib/datetime.ts`, `MonthGrid.tsx`, `DayView.tsx`,
-> `Dashboard.tsx` - but `MonthGrid`/`DayView` now hand back viewer-zone-aware
-> `TZDate` instances through their click callbacks, and `useEventForm.ts`
-> was re-wrapping those in a plain `new Date(...)` before use, which would
-> have silently discarded the zone. Fixed `useEventForm`, and while there,
-> found and fixed a deeper pre-existing bug: create/edit submissions sent a
-> bare "2026-09-20T09:00" string the backend parsed in the app's own UTC
-> timezone rather than the viewer's, so two people creating an event at
-> "9am" in different zones both landed on 9am UTC. Both are fixed now
-> (`localInputValueToUtcIso()` / `withUtcOffsets()` in `lib/datetime.ts` /
-> `useEventForm.ts`), verified against Carbon directly (see that commit),
-> but not yet clicked through in an actual browser.
+> **Two things corrected while building this:**
+> 1. The original roadmap assumed `sabre/vobject`'s `TimeZoneUtil` generates
+>    VTIMEZONE blocks - it doesn't, it only parses ones a client already
+>    produced. This feed uses bare IANA `TZID` references instead (no
+>    embedded VTIMEZONE) for recurring events; a real generator is deferred.
+> 2. `RedactedEvent::uid()` used to always embed the row's own id - for an
+>    override row that's a different id than its series, which would have
+>    broken a calendar client's ability to associate the override with its
+>    master. Fixed to use `recurrenceParentId ?? id`.
 >
-> **Task 9's own grep for bridged classes only checked `pages/`and
-> `layouts/`, missing `RecurrenceEditor.tsx` and `RecurrenceScopeDialog.tsx`**
-> under `components/Calendar/` - both still had raw indigo/gray Tailwind
-> classes. Converted both to the design system before deleting the bridge,
-> or they'd have reverted to stock Tailwind colors. Also deleted
-> `NavLink.tsx`, `ResponsiveNavLink.tsx`, `Dropdown.tsx` (the plan's "keep
-> only if imported" list) - none had any remaining imports.
+> **Manual check outstanding, not performed - no device access this
+> session:** subscribe from an actual iPhone (Settings → Calendar →
+> Accounts → Add Subscribed Calendar, or tap the `webcal://` link from
+> Integrations) and confirm events land at the correct hour and another
+> user's private event shows as an untitled "Busy" block.
 >
-> **Manual browser checks outstanding, none performed - no browser
-> automation is available in this session:**
-> 1. Task 5's Step 9: edit one occurrence of a recurring event, choose
->    "This event" in the scope prompt, confirm only that occurrence changed.
-> 2. Task 6's Step 6: month grid, day view and the create dialog on all
->    three pages (Events/Index, Personal, Dashboard), in both appearances -
->    confirm event pills take their calendar's colour and a redacted event
->    reads as a flat "Busy" block.
-> 3. Task 8's Step 6: set your profile timezone to `Pacific/Auckland`,
->    create an event, confirm it appears at the hour you typed. Then switch
->    to `America/Los_Angeles` and confirm the same event moves in the grid
->    without its stored time changing. This is the one that actually proves
->    the write-path fix above works outside a `tinker` check.
-> 4. Task 9's Step 6: visual sweep of every page (Dashboard, Events,
->    Personal, Calendars, Groups, Profile, Login, Welcome, Styleguide) in
->    both appearances - nothing should look different now that the legacy
->    bridge is gone. If something does, that page was still leaning on it.
+> **Once merged:** Google two-way sync is the only roadmap item left - see
+> "Still to come".
 >
-> All four are covered at the HTTP/component level by existing tests and
-> were verified by static code review, but nobody has clicked through any
-> of them in a real browser since these changes landed. Do all four by hand
-> before treating this branch as production-ready.
->
-> **Separately, from the earlier team-busy-visibility/messaging work
-> (merged via PR #11):** the "Message" button's `messagedIds` is local
-> React state, so a "Messaged" row reverts to "Message" on page reload even
-> though the server-side dedup still silently blocks a second send. Not
-> blocking - the dedup is enforced either way - but worth fixing.
->
-> **Task 6 also gave Dashboard's dialog recurrence editing and a scope
-> prompt it never had before** - its old hand-rolled fields had no
-> RecurrenceEditor at all, so switching to the shared EventDialog is a real
-> (intentional, but beyond that plan's literal wording) capability change:
-> editing a recurring event from the dashboard agenda can now change the
-> whole series, and now asks which occurrences first, matching the other
-> two pages. Flagged in case that capability change wasn't wanted on the
-> dashboard specifically.
+> A project README also landed on its own branch (`docs/readme`, pushed,
+> not yet merged) - unrelated to any phase, just repo documentation.
 
 ---
 
-## Plan being executed
+## Manual browser/device checks still outstanding
 
-`docs/superpowers/plans/2026-09-14-paper-ui-conversion.md` - **complete.**
+None of these can be performed in this session (no browser or device
+access). Covered at the HTTP/component level by existing tests and
+verified by static review, but nobody has clicked through any of them
+since the change landed - do all of these by hand before treating `dev`
+as production-ready:
 
-| #   | Task                                            | State     |
-| --- | ------------------------------------------------ | --------- |
-| 1   | Auth pages and the guest layout                 | [x] done  |
-| 2   | Profile                                         | [x] done  |
-| 3   | Groups                                          | [x] done  |
-| 4   | Calendar list pages                             | [x] done  |
-| 5   | Extract the shared event dialog                 | [x] done* |
-| 6   | Calendar page chrome                            | [x] done* |
-| 7   | The landing page                                | [x] done  |
-| 8   | Render dates in the viewer's timezone           | [x] done* |
-| 9   | Delete the legacy bridge and the old primitives | [x] done* |
+1. **Recurrence scope prompt** (paper UI conversion, Task 5): edit one
+   occurrence of a recurring event, choose "This event," confirm only that
+   occurrence changed.
+2. **Visual check of the three converted calendar pages** (Task 6): month
+   grid, day view, create dialog on Events/Index, Personal, Dashboard, in
+   both appearances - event pills take their calendar's colour, a redacted
+   event reads as a flat "Busy" block.
+3. **Viewer-timezone check** (Task 8): set your profile timezone to
+   `Pacific/Auckland`, create an event, confirm it appears at the hour you
+   typed. Switch to `America/Los_Angeles`, confirm the same event moves in
+   the grid without its stored time changing. This is the one that proves
+   the create/edit write-path fix works outside a `tinker` check.
+4. **Full visual sweep** (Task 9, legacy bridge deletion): every page, both
+   appearances - nothing should look different now that the bridge is gone.
+5. **Group Messages inbox**: click "Message" on a dashboard agenda row for
+   a group event you can't edit, send it, confirm it becomes "Messaged."
+6. **ICS feed**: see "Resume here" above.
 
-\* Task 5, 6, 8 and 9: manual browser checks still outstanding - see above.
+## Known gaps, deliberately deferred
+
+- The dashboard's "Message" button state (`messagedIds`) is local React
+  state, so a "Messaged" row reverts to "Message" on page reload even
+  though the server-side dedup still blocks a second send either way. Not
+  blocking, worth fixing.
+- **The month grid shows an event only on its start day** — no multi-day
+  spanning. A functional change, not a conversion - needs its own plan.
+- `GroupController@show` ships raw Eloquent models to Inertia.
+- `types/auth.ts`'s `User` has an index signature that quietly defeats
+  type-checking on user fields.
+- A full generated VTIMEZONE component for the ICS feed (see "Resume
+  here").
+- **Open question for the user:** whether to add `@php artisan migrate
+  --graceful` to the `dev` composer script. `composer dev` does not
+  migrate, and that has broken the local app twice after a merge.
 
 ---
 
@@ -124,36 +106,21 @@ so the state ships with the work rather than trailing it.
 | —     | `fix/npm-lockfile`, `fix/calendars-overview-null-group`.                                           |
 | —     | Paper theme, dashboard month calendar + side agenda, calendar picker, Super Admin write fix.       |
 | 6     | Calendar page chrome — `Events/Index`, `Calendars/Personal`, `Dashboard`, `DayView` converted.     |
-| —     | Team busy-visibility, scoped conflict detection, team-busy panel, member-to-admin messaging.       |
-| 7-9   | Landing page, viewer-timezone rendering (grid + write path), legacy bridge + primitives deleted.   |
+| —     | Team busy-visibility, scoped conflict detection, team-busy panel, member-to-admin messaging (PR #11). |
+| 7-9   | Landing page, viewer-timezone rendering (grid + write path), legacy bridge + primitives deleted (PR #12). |
+| —     | Group admin Messages/Reports inbox, `resolved_at` toggle (PR #13).                                  |
 
-Test count at the last green run: **317 passing** (on `feature/group-messages-inbox`, not yet merged).
+Test count at the last green run on `dev`: **318 passing**. (`feature/ics-feed` adds 23 more, not yet merged.)
 
 ---
 
 ## Still to come
 
-- **ICS feed** — per-user secret-token URL, `sabre/vobject` with real
-  VTIMEZONE, ETag/304 caching, a "Subscribed devices" revoke list. Was
-  blocked on viewer timezone rendering; unblocked now that Task 8 is on
-  `dev`.
 - **Google two-way sync** — six incremental steps, OAuth through to the
   conflict audit UI. Against the REST API via the `Http` facade, because
   neither `google/apiclient` nor `laravel/socialite` supports Guzzle 8.
   Google's calendar scopes are _sensitive_, so OAuth verification takes weeks —
   worth starting the application early.
-
-## Known gaps, deliberately deferred
-
-- **The month grid shows an event only on its start day** — no multi-day
-  spanning. A functional change rather than a conversion, so it needs its own
-  plan.
-- `GroupController@show` ships raw Eloquent models to Inertia.
-- `types/auth.ts`'s `User` has an index signature that quietly defeats
-  type-checking on user fields.
-- **Open question for the user:** whether to add `@php artisan migrate
---graceful` to the `dev` composer script. `composer dev` does not migrate,
-  and that has broken their local app twice after a merge.
 
 ---
 
