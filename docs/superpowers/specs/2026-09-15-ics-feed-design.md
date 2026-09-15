@@ -279,7 +279,7 @@ Route::get('feed/{token}.ics', [IcsFeedController::class, 'show'])
     ->withoutMiddleware([
         \Illuminate\Session\Middleware\StartSession::class,
         \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
         \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
         \App\Http\Middleware\HandleInertiaRequests::class,
     ])

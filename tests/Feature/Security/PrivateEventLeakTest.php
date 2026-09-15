@@ -187,3 +187,15 @@ test('reporting a conflict does not email the title of a private event', functio
 
     expect($private->fresh()->title)->toBe('Oncology appointment');
 });
+
+test('a private event never leaks its details into the ICS feed', function () {
+    [$owner, $other, $group, $calendar] = makePrivateEventScenario();
+
+    $plaintext = issueFeedToken($other);
+    $body = $this->get("/feed/{$plaintext}.ics")->getContent();
+
+    expect($body)->not->toContain('Oncology appointment')
+        ->and($body)->not->toContain('Results review')
+        ->and($body)->not->toContain('St Thomas Hospital')
+        ->and($body)->toContain('SUMMARY:Busy');
+});

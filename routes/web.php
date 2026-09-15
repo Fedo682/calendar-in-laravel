@@ -6,6 +6,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupMembershipController;
 use App\Http\Controllers\GroupMessageController;
+use App\Http\Controllers\IcsFeedController;
 use App\Http\Controllers\PersonalCalendarController;
 use App\Http\Controllers\PersonalEventController;
 use App\Http\Controllers\ProfileController;
@@ -25,6 +26,18 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
+
+// Token-authenticated, not cookie-authenticated - no session, no CSRF,
+// no Inertia. The first unauthenticated route in this app.
+Route::get('feed/{token}.ics', [IcsFeedController::class, 'show'])
+    ->withoutMiddleware([
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \App\Http\Middleware\HandleInertiaRequests::class,
+    ])
+    ->name('ics.feed');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
