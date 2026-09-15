@@ -6,6 +6,7 @@ use App\Models\Group;
 use App\Models\GroupUser;
 use App\Models\Role;
 use App\Models\User;
+use App\Support\Calendar\CalendarFeedTokenService;
 use App\Support\Calendar\Occurrence;
 use App\Support\Calendar\RecurrenceExpander;
 use App\Support\Calendar\RedactedEvent;
@@ -196,4 +197,15 @@ function localStarts(array $occurrences, string $timezone): array
         fn (Occurrence $o) => $o->startsAt->setTimezone($timezone)->format('Y-m-d H:i'),
         $occurrences,
     );
+}
+
+/**
+ * Issue a fresh ICS feed token for a user, returning only the plaintext -
+ * the shape every feed test actually needs to hit the route with.
+ */
+function issueFeedToken(User $user): string
+{
+    ['plaintext' => $plaintext] = app(CalendarFeedTokenService::class)->issue($user);
+
+    return $plaintext;
 }

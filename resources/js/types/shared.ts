@@ -13,6 +13,8 @@ import type { User } from '@/types/auth';
 export interface FlashMessages {
     success: string | null;
     error: string | null;
+    /** Set only right after issuing a new ICS feed token - the one time its plaintext is available. */
+    new_feed_url: string | null;
 }
 
 /** Per-user display preferences. Defaults are applied server-side. */

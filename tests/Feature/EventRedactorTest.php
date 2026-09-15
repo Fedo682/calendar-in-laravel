@@ -216,3 +216,34 @@ test('a redacted group-calendar event carries no owner name', function () {
     expect($redacted->isRedacted)->toBeTrue();
     expect($redacted->ownerName)->toBeNull();
 });
+
+test('an overrides uid matches its masters uid, not its own row id', function () {
+    $group = Group::factory()->create();
+    $owner = User::factory()->create();
+    asGroupRole($group, $owner, 'admin');
+    $calendar = Calendar::factory()->create(['group_id' => $group->id]);
+
+    $master = Event::factory()->create([
+        'calendar_id' => $calendar->id,
+        'created_by' => $owner->id,
+        'recurrence_rule' => 'FREQ=WEEKLY;BYDAY=MO',
+        'recurrence_timezone' => 'Europe/Berlin',
+        'starts_at' => now()->addWeek()->startOfWeek(),
+        'ends_at' => now()->addWeek()->startOfWeek()->addHour(),
+    ]);
+    $override = Event::factory()->create([
+        'calendar_id' => $calendar->id,
+        'created_by' => $owner->id,
+        'recurrence_parent_id' => $master->id,
+        'recurrence_id' => $master->starts_at,
+        'starts_at' => $master->starts_at->copy()->addHour(),
+        'ends_at' => $master->ends_at->copy()->addHour(),
+    ]);
+
+    $redactor = app(EventRedactor::class);
+    $masterRedacted = $redactor->redact($master->fresh(), $owner);
+    $overrideRedacted = $redactor->redact($override->fresh(), $owner);
+
+    expect($overrideRedacted->uid('example.test'))
+        ->toBe($masterRedacted->uid('example.test'));
+});

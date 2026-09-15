@@ -52,6 +52,10 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                // The one time a freshly issued feed token's plaintext is
+                // ever available - shown once on the Integrations page,
+                // then gone; only its hash persists.
+                'new_feed_url' => fn () => $request->session()->get('new_feed_url'),
             ],
             // Property reads use -> rather than ?->, because ?? already
             // suppresses reading a property off null. A method call would
