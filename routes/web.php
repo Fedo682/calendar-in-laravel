@@ -10,6 +10,7 @@ use App\Http\Controllers\IcsFeedController;
 use App\Http\Controllers\PersonalCalendarController;
 use App\Http\Controllers\PersonalEventController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsIntegrationsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -43,6 +44,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('settings/integrations', [SettingsIntegrationsController::class, 'edit'])
+        ->name('settings.integrations');
+    Route::post('settings/integrations/ics-tokens', [SettingsIntegrationsController::class, 'store'])
+        ->name('ics.tokens.store');
+    Route::delete('settings/integrations/ics-tokens/{token}', [SettingsIntegrationsController::class, 'destroy'])
+        ->name('ics.tokens.destroy');
 
     // Cross-group calendar access ("My Calendars" - every calendar the user can reach)
     Route::get('/calendars', [CalendarController::class, 'all'])->name('calendars.index');
