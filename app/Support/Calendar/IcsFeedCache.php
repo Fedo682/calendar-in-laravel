@@ -15,14 +15,16 @@ final class IcsFeedCache
             return sha1('empty');
         }
 
-        $agg = Event::query()
-            ->whereIn('calendar_id', $ids)
-            ->selectRaw('MAX(updated_at) as latest, COUNT(*) as total')
-            ->first();
+        // Two indexed aggregates, not a hand-rolled selectRaw() - a raw
+        // aliased column is a dynamic property PHPStan (rightly) can't type
+        // on an Event instance, and Eloquent's own aggregate methods have
+        // known return types without needing one.
+        $latest = Event::query()->whereIn('calendar_id', $ids)->max('updated_at');
+        $total = Event::query()->whereIn('calendar_id', $ids)->count();
 
         return sha1(implode('|', [
-            $agg?->latest,
-            $agg?->total,
+            $latest,
+            $total,
             $ids->sort()->implode(','),
         ]));
     }

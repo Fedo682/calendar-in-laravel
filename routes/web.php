@@ -11,8 +11,13 @@ use App\Http\Controllers\PersonalCalendarController;
 use App\Http\Controllers\PersonalEventController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SettingsIntegrationsController;
+use App\Http\Middleware\HandleInertiaRequests;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -28,29 +33,10 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-// Token-authenticated, not cookie-authenticated - no session, no CSRF,
-// no Inertia. The first unauthenticated route in this app.
-Route::get('feed/{token}.ics', [IcsFeedController::class, 'show'])
-    ->withoutMiddleware([
-        \Illuminate\Session\Middleware\StartSession::class,
-        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        \Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class,
-        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-        \App\Http\Middleware\HandleInertiaRequests::class,
-    ])
-    ->name('ics.feed');
-
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-
-    Route::get('settings/integrations', [SettingsIntegrationsController::class, 'edit'])
-        ->name('settings.integrations');
-    Route::post('settings/integrations/ics-tokens', [SettingsIntegrationsController::class, 'store'])
-        ->name('ics.tokens.store');
-    Route::delete('settings/integrations/ics-tokens/{token}', [SettingsIntegrationsController::class, 'destroy'])
-        ->name('ics.tokens.destroy');
 
     // Cross-group calendar access ("My Calendars" - every calendar the user can reach)
     Route::get('/calendars', [CalendarController::class, 'all'])->name('calendars.index');
@@ -138,6 +124,13 @@ Route::middleware('auth')->group(function () {
     // SETTINGS: ICS FEED TOKENS
     // ===================================================================
 
+    Route::get('settings/integrations', [SettingsIntegrationsController::class, 'edit'])
+        ->name('settings.integrations');
+    Route::post('settings/integrations/ics-tokens', [SettingsIntegrationsController::class, 'store'])
+        ->name('ics.tokens.store');
+    Route::delete('settings/integrations/ics-tokens/{token}', [SettingsIntegrationsController::class, 'destroy'])
+        ->name('ics.tokens.destroy');
+
     // ===================================================================
     // SETTINGS: GOOGLE CALENDAR SYNC
     // ===================================================================
@@ -153,6 +146,18 @@ Route::middleware('auth')->group(function () {
 // =======================================================================
 
 // ---- ICS subscription feed ----
+
+// Token-authenticated, not cookie-authenticated - no session, no CSRF,
+// no Inertia.
+Route::get('feed/{token}.ics', [IcsFeedController::class, 'show'])
+    ->withoutMiddleware([
+        StartSession::class,
+        ShareErrorsFromSession::class,
+        PreventRequestForgery::class,
+        AddQueuedCookiesToResponse::class,
+        HandleInertiaRequests::class,
+    ])
+    ->name('ics.feed');
 
 // ---- Google push notification webhook ----
 

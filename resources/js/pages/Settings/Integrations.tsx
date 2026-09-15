@@ -50,7 +50,7 @@ export default function SettingsIntegrations({ tokens }: Props) {
     const revoke = (id: number) => {
         if (
             !window.confirm(
-                "Revoke this feed URL? Anything subscribed to it will stop updating.",
+                'Revoke this feed URL? Anything subscribed to it will stop updating.',
             )
         ) {
             return;
@@ -79,7 +79,7 @@ export default function SettingsIntegrations({ tokens }: Props) {
                             <Input
                                 readOnly
                                 value={flash.new_feed_url}
-                                className="font-mono text-caption1"
+                                className="text-caption1 font-mono"
                             />
                             <Button onClick={() => copy(flash.new_feed_url!)}>
                                 {copied ? 'Copied' : 'Copy'}
@@ -90,7 +90,7 @@ export default function SettingsIntegrations({ tokens }: Props) {
                                 /^https?:\/\//,
                                 'webcal://',
                             )}
-                            className="text-accent hover:underline text-footnote mt-2 inline-block"
+                            className="text-accent text-footnote mt-2 inline-block hover:underline"
                         >
                             Open in Calendar app (webcal://)
                         </a>
@@ -108,8 +108,8 @@ export default function SettingsIntegrations({ tokens }: Props) {
                     {tokens.length === 0 ? (
                         <div className="px-6 py-8 text-center">
                             <p className="text-content-secondary text-footnote mb-4">
-                                No feed URL yet. Generate one to subscribe
-                                from an iPhone, Google Calendar, or Outlook.
+                                No feed URL yet. Generate one to subscribe from
+                                an iPhone, Google Calendar, or Outlook.
                             </p>
                             <Button
                                 onClick={() =>
@@ -151,7 +151,10 @@ export default function SettingsIntegrations({ tokens }: Props) {
                             onSubmit={submit}
                             className="border-hairline flex items-end gap-2 border-t px-6 py-4"
                         >
-                            <Field label="Add another device" className="flex-1">
+                            <Field
+                                label="Add another device"
+                                className="flex-1"
+                            >
                                 <Input
                                     value={data.label}
                                     onChange={(e) =>
@@ -174,9 +177,7 @@ export default function SettingsIntegrations({ tokens }: Props) {
 SettingsIntegrations.layout = (page: ReactNode) => (
     <AuthenticatedLayout
         header={
-            <h2 className="text-headline text-chrome-content">
-                Integrations
-            </h2>
+            <h2 className="text-headline text-chrome-content">Integrations</h2>
         }
     >
         {page}

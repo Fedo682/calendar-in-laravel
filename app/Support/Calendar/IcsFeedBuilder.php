@@ -24,7 +24,7 @@ final class IcsFeedBuilder
 
         $redacted = $this->occurrences->mastersFor($user, $from, $to);
 
-        $calendar = new VCalendar();
+        $calendar = new VCalendar;
         $calendar->add('PRODID', '-//GroupSync Calendar//ICS Feed//EN');
         $calendar->add('X-WR-CALNAME', $user->name.' - GroupSync Calendar');
         $calendar->add('X-PUBLISHED-TTL', (string) config('calendar.ics.refresh_interval'));
@@ -40,14 +40,17 @@ final class IcsFeedBuilder
     {
         $host = parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost';
 
-        // $calendar->add() constructs the VEvent as a child of this
-        // VCalendar (so it serializes against the right root) and returns
-        // it - unlike building a VEvent against a throwaway parent.
-        $vevent = $calendar->add('VEVENT', [
+        // Component::add() is untyped - it returns whatever Node it was
+        // handed or built, which PHPStan can only ever see as the generic
+        // base Node type. Constructing the VEvent directly (against this
+        // VCalendar as its root, so it still serializes correctly) keeps a
+        // concrete, statically-known VEvent instead.
+        $vevent = new VEvent($calendar, 'VEVENT', [
             'UID' => $event->uid($host),
             'SUMMARY' => $event->title,
             'DTSTAMP' => new \DateTime('now', new \DateTimeZone('UTC')),
         ]);
+        $calendar->add($vevent);
 
         $this->setDates($vevent, $event);
 
