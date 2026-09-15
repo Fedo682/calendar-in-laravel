@@ -275,4 +275,12 @@ class User extends Authenticatable implements MustVerifyEmail
                 ->values(),
         ])->values();
     }
+
+    /**
+     * @return HasMany<CalendarFeedToken, $this>
+     */
+    public function feedTokens(): HasMany
+    {
+        return $this->hasMany(CalendarFeedToken::class);
+    }
 }
