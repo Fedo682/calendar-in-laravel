@@ -13,6 +13,7 @@ import {
     Monitor,
     Moon,
     PanelLeft,
+    Rss,
     Search,
     Settings,
     Sun,
@@ -558,6 +559,9 @@ export default function AppShell({
 
                         <MenuLink href={route('profile.edit')} icon={Settings}>
                             Profile
+                        </MenuLink>
+                        <MenuLink href={route('settings.integrations')} icon={Rss}>
+                            Calendar feed
                         </MenuLink>
                         <MenuLink
                             href={route('logout')}
